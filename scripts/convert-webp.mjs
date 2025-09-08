@@ -42,6 +42,7 @@ const downloadFile = async (pfx, name) => {
   const { data, error } = await storage.download(full);
   if (error) throw error;
   const buf = Buffer.from(await data.arrayBuffer());
+ console.log("DEBUG:", full, "byteLength:", buf.length);
   console.log("Downloaded:", full, "size:", buf.length); // ✅ debug satırı
   const out = path.join(tmpDir, name);
   fs.writeFileSync(out, buf);
@@ -91,4 +92,5 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
