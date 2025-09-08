@@ -41,7 +41,11 @@ const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const { data, error } = await storage.download(full);
   if (error) throw error;
-  const buf = Buffer.from(await data.arrayBuffer());
+  const chunks = [];
+  for await (const chunk of data.stream()) {
+    chunks.push(chunk);
+  }
+  const buf = Buffer.concat(chunks);
 
   // 🔎 Debug
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
@@ -96,6 +100,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
