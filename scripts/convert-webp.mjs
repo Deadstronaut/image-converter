@@ -39,16 +39,20 @@ const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const { data, error } = await storage.download(full);
   if (error) throw error;
+
   const buf = Buffer.from(await data.arrayBuffer());
 
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
-  console.log("BUF TEXT >>>", buf.toString("utf8").slice(0,200)); // 🔎 ilk 200 karakteri yazdır
 
-  const out = path.join(tmpDir, name);
-  fs.writeFileSync(out, buf);
-  return out;
+  // geçerli image mi kontrol et
+  const sig = buf.slice(0, 4).toString("hex");
+  if (!sig.startsWith("ffd8") && sig !== "89504e47") {
+    console.error("❌ Geçersiz dosya, muhtemelen HTML:", buf.toString("utf8").slice(0,200));
+    return null; // işlemeyi atla
+  }
+
+  return { buf, full, name };
 };
-
 
 // --- UPLOAD ---
 const uploadFile = async (dstPath, buf) => {
@@ -98,4 +102,5 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
