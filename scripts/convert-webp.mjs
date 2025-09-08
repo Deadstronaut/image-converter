@@ -43,15 +43,14 @@ const downloadFile = async (pfx, name) => {
   if (error) throw error;
   const buf = Buffer.from(await data.arrayBuffer());
 
-  // 🔎 Debug satırı
-  console.log("DEBUG file:", full, 
-              "size:", buf.length, 
-              "first20:", buf.slice(0,20).toString("hex"));
+  // 🔎 Debug
+  console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
   const out = path.join(tmpDir, name);
   fs.writeFileSync(out, buf);
   return out;
 };
+
 
 
 
@@ -97,6 +96,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
