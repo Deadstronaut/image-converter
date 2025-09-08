@@ -71,23 +71,27 @@ const removeFile = async (srcPath) => {
 
 // --- MAIN ---
 (async () => {
+  console.log(">>> START CONVERT SCRIPT <<<");
+  console.log("ENV:", { SUPABASE_URL, BUCKET, PRODUCTS_TABLE, IMAGE_COLUMN, prefix, quality, updateDB });
+
   const files = await listOnce(prefix);
+  console.log("LIST RESULT:", files.map(f => f.name));
+
   if (!files.length) {
     console.log("Hiç dosya yok");
     return;
   }
 
-for (const f of files) {
-  const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+  for (const f of files) {
+    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
 
-  // 🔎 Debug
-  console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
+    // 🔎 Debug
+    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-  const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-  const localPath = await downloadFile(prefix, f.name);
-  const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
-
+    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+    const localPath = await downloadFile(prefix, f.name);
     const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
+
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
@@ -104,4 +108,6 @@ for (const f of files) {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
+
 
