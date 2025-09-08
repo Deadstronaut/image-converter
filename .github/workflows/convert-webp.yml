@@ -6,6 +6,10 @@ on:
       prefix:
         description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/oppo)"
         required: true
+      quality:
+        description: "WebP kalite (1-100)"
+        required: false
+        default: "82"
       update_db:
         description: "products.image_url güncellensin mi?"
         required: false
