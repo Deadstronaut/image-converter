@@ -24,10 +24,8 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
-      - run: npm install @supabase/supabase-js --no-audit --no-fund
-      - run: npm install -g @squoosh/cli
 
-      - name: Convert + Upload
+      - name: Convert & Upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
