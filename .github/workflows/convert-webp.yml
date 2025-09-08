@@ -24,7 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
       - run: npm install --no-audit --no-fund
       - run: npm install @squoosh/lib @supabase/supabase-js --no-audit --no-fund
       - name: Convert
@@ -34,6 +35,7 @@ jobs:
           BUCKET: ${{ secrets.BUCKET }}
           PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
+          NODE_OPTIONS: "--experimental-wasm-modules"
         run: |
           node scripts/convert-webp.mjs \
             --prefix "${{ github.event.inputs.prefix }}" \
