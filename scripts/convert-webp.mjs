@@ -39,26 +39,20 @@ const listOnce = async (pfx) => {
 
 const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
-  const { data, error } = await storage.download(full);
-  if (error) throw error;
+  const url = publicBase + full;
 
-  let buf;
-  if (data.arrayBuffer) {
-    buf = Buffer.from(await data.arrayBuffer());
-  } else if (data.stream) {
-    const chunks = [];
-    for await (const c of data.stream()) chunks.push(c);
-    buf = Buffer.concat(chunks);
-  } else {
-    throw new Error("Unsupported data type from storage.download()");
-  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download fail ${url} → ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
 
+  // 🔎 Debug
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
   const out = path.join(tmpDir, name);
   fs.writeFileSync(out, buf);
   return out;
 };
+
 
 
 const uploadFile = async (dstPath, buf) => {
@@ -103,6 +97,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
