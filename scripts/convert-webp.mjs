@@ -1,7 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import fs from "fs";
-import path from "path";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -28,9 +26,6 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const storage = supabase.storage.from(BUCKET);
 const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 
-const tmpDir = "./input";
-fs.mkdirSync(tmpDir, { recursive: true });
-
 // --- LIST ---
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
@@ -38,20 +33,15 @@ const listOnce = async (pfx) => {
   return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
 };
 
-// --- DOWNLOAD (public URL) ---
+// --- DOWNLOAD (return Buffer) ---
 const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const url = publicBase + full;
-
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Download fail ${url} → ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
-
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
-
-  const out = path.join(tmpDir, name);
-  fs.writeFileSync(out, buf);
-  return out;
+  return buf;
 };
 
 // --- UPLOAD ---
@@ -71,12 +61,7 @@ const removeFile = async (srcPath) => {
 
 // --- MAIN ---
 (async () => {
-  console.log(">>> START CONVERT SCRIPT <<<");
-  console.log("ENV:", { SUPABASE_URL, BUCKET, PRODUCTS_TABLE, IMAGE_COLUMN, prefix, quality, updateDB });
-
   const files = await listOnce(prefix);
-  console.log("LIST RESULT:", files.map(f => f.name));
-
   if (!files.length) {
     console.log("Hiç dosya yok");
     return;
@@ -84,15 +69,13 @@ const removeFile = async (srcPath) => {
 
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
 
     // 🔎 Debug
     console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    const localPath = await downloadFile(prefix, f.name);
-    const buf = fs.readFileSync(localPath);
+    const buf = await downloadFile(prefix, f.name);
     const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
-
 
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
@@ -110,7 +93,3 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
-
-
-
-
