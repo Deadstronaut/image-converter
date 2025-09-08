@@ -41,6 +41,8 @@ const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const { data, error } = await storage.download(full);
   if (error) throw error;
+
+  // ✅ Stream ile doğru şekilde buffer oluştur
   const chunks = [];
   for await (const chunk of data.stream()) {
     chunks.push(chunk);
@@ -54,9 +56,6 @@ const downloadFile = async (pfx, name) => {
   fs.writeFileSync(out, buf);
   return out;
 };
-
-
-
 
 const uploadFile = async (dstPath, buf) => {
   const { error } = await storage.upload(dstPath, buf, {
@@ -100,6 +99,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
