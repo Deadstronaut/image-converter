@@ -77,10 +77,15 @@ const removeFile = async (srcPath) => {
     return;
   }
 
-  for (const f of files) {
-    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
-    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    const localPath = await downloadFile(prefix, f.name);
+for (const f of files) {
+  const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+
+  // 🔎 Debug
+  console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
+
+  const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+  const localPath = await downloadFile(prefix, f.name);
+  const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
 
     const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
     await uploadFile(dstPath, webpBuf);
@@ -99,3 +104,4 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
