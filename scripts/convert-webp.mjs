@@ -38,17 +38,18 @@ const listOnce = async (pfx) => {
   return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
 };
 
-// --- DOWNLOAD ---
+// --- DOWNLOAD (public URL) ---
 const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
-  const url = publicBase + full;
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Download fail ${url} → ${res.status}`);
-  const buf = await res.buffer(); // ✅ doğru binary alımı
+  const { data, error } = await storage.download(full);
+  if (error) throw error;
+  const buf = Buffer.from(await data.arrayBuffer());
 
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
-  return { buf, full };
+
+  const out = path.join(tmpDir, name);
+  fs.writeFileSync(out, buf);
+  return out;
 };
 
 // --- UPLOAD ---
@@ -99,3 +100,4 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
