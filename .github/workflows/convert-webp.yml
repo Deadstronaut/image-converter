@@ -12,8 +12,8 @@ on:
         default: "82"
       update_db:
         description: "products.image_url güncellensin mi?"
-        required: false
-        default: "false"
+        type: boolean
+        default: false
 
 jobs:
   run:
@@ -35,17 +35,7 @@ jobs:
           PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
         run: |
-          # 1) Prefix altındaki dosyaları indir
-          mkdir -p input
-          node scripts/download-prefix.mjs --prefix "${{ github.event.inputs.prefix }}" --out ./input
-
-          # 2) JPG/PNG -> WebP çevir
-          for f in ./input/*.{jpg,jpeg,png}; do
-            [ -e "$f" ] || continue
-            squoosh-cli --webp auto "$f"
-          done
-
-          # 3) Supabase’e yükle ve DB güncelle
-          node scripts/upload-webp.mjs \
+          node scripts/convert-webp.mjs \
             --prefix "${{ github.event.inputs.prefix }}" \
-            ${{ github.event.inputs.update_db == 'true' && '--update-db' || '' }}
+            --quality "${{ github.event.inputs.quality }}" \
+            ${{ github.event.inputs.update_db && '--update-db' || '' }}
