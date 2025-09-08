@@ -1,2 +1,2 @@
 # image-converter
-Alınır mı iamge covnerter
+Alınır mı image covnerter
