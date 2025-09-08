@@ -42,20 +42,24 @@ const downloadFile = async (pfx, name) => {
   const { data, error } = await storage.download(full);
   if (error) throw error;
 
-  // ✅ Stream ile doğru şekilde buffer oluştur
-  const chunks = [];
-  for await (const chunk of data.stream()) {
-    chunks.push(chunk);
+  let buf;
+  if (data.arrayBuffer) {
+    buf = Buffer.from(await data.arrayBuffer());
+  } else if (data.stream) {
+    const chunks = [];
+    for await (const c of data.stream()) chunks.push(c);
+    buf = Buffer.concat(chunks);
+  } else {
+    throw new Error("Unsupported data type from storage.download()");
   }
-  const buf = Buffer.concat(chunks);
 
-  // 🔎 Debug
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
   const out = path.join(tmpDir, name);
   fs.writeFileSync(out, buf);
   return out;
 };
+
 
 const uploadFile = async (dstPath, buf) => {
   const { error } = await storage.upload(dstPath, buf, {
@@ -99,6 +103,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
