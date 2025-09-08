@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import fs from "fs";
-import path from "path";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -28,28 +27,30 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const storage = supabase.storage.from(BUCKET);
 const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 
-const tmpDir = "./input";
-fs.mkdirSync(tmpDir, { recursive: true });
-
 // --- LIST ---
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
   if (error) throw error;
-  return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
+  return (data || []).filter((f) => /\.(jpe?g|png)$/i.test(f.name));
 };
 
-// --- DOWNLOAD (public URL) ---
+// --- DOWNLOAD (binary buffer) ---
 const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const { data, error } = await storage.download(full);
   if (error) throw error;
   const buf = Buffer.from(await data.arrayBuffer());
 
-  console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
+  console.log(
+    "DEBUG >>>",
+    full,
+    "size:",
+    buf.length,
+    "first20:",
+    buf.slice(0, 20).toString("hex")
+  );
 
-  const out = path.join(tmpDir, name);
-  fs.writeFileSync(out, buf);
-  return out;
+  return buf; // ✅ sadece buffer dön
 };
 
 // --- UPLOAD ---
@@ -81,8 +82,8 @@ const removeFile = async (srcPath) => {
 
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
 
-    const { buf } = await downloadFile(prefix, f.name);
-    const webpBuf = await sharp(buf).webp({ quality }).toBuffer(); // ✅ buffer ile çalış
+    const buf = await downloadFile(prefix, f.name);
+    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
 
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
@@ -100,4 +101,3 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
-
