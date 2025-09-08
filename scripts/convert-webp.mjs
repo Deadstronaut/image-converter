@@ -90,7 +90,9 @@ const removeFile = async (srcPath) => {
 
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
     const localPath = await downloadFile(prefix, f.name);
-    const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
+    const buf = fs.readFileSync(localPath);
+    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
+
 
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
@@ -108,6 +110,7 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
