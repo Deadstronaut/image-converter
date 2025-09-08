@@ -41,17 +41,14 @@ const downloadFile = async (pfx, name) => {
   if (error) throw error;
   const buf = Buffer.from(await data.arrayBuffer());
 
-  console.log(
-    "DEBUG >>>",
-    full,
-    "size:",
-    buf.length,
-    "first20:",
-    buf.slice(0, 20).toString("hex")
-  );
+  console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
+  console.log("BUF TEXT >>>", buf.toString("utf8").slice(0,200)); // 🔎 ilk 200 karakteri yazdır
 
-  return buf; // ✅ sadece buffer dön
+  const out = path.join(tmpDir, name);
+  fs.writeFileSync(out, buf);
+  return out;
 };
+
 
 // --- UPLOAD ---
 const uploadFile = async (dstPath, buf) => {
@@ -101,3 +98,4 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
