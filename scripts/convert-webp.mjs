@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import fs from "fs";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -31,7 +30,7 @@ const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
   if (error) throw error;
-  return (data || []).filter((f) => /\.(jpe?g|png)$/i.test(f.name));
+  return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
 };
 
 // --- DOWNLOAD (binary buffer) ---
@@ -41,17 +40,16 @@ const downloadFile = async (pfx, name) => {
   if (error) throw error;
 
   const buf = Buffer.from(await data.arrayBuffer());
-
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
-  // geçerli image mi kontrol et
+  // MIME signature check
   const sig = buf.slice(0, 4).toString("hex");
   if (!sig.startsWith("ffd8") && sig !== "89504e47") {
     console.error("❌ Geçersiz dosya, muhtemelen HTML:", buf.toString("utf8").slice(0,200));
-    return null; // işlemeyi atla
+    return null;
   }
 
-  return { buf, full, name };
+  return { buf, full };
 };
 
 // --- UPLOAD ---
@@ -79,13 +77,16 @@ const removeFile = async (srcPath) => {
 
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
     console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+    const file = await downloadFile(prefix, f.name);
+    if (!file) {
+      console.log("⚠️ Atlandı:", srcPath);
+      continue;
+    }
 
-    const buf = await downloadFile(prefix, f.name);
-    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
-
+    const webpBuf = await sharp(file.buf).webp({ quality }).toBuffer();
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
@@ -99,8 +100,6 @@ const removeFile = async (srcPath) => {
       if (error) console.error("DB update err:", error.message);
     }
 
-    console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
+    console.log(`✅ Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
-
-
