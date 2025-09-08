@@ -20,6 +20,10 @@ const getArg = (n, d = null) => {
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
+const pathsArg = getArg("paths", ""); // yeni: tek/çok dosya
+const explicitPaths = pathsArg
+  ? pathsArg.split(",").map(p => p.trim()).filter(Boolean)
+  : [];
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -33,23 +37,22 @@ const listOnce = async (pfx) => {
   return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
 };
 
-// --- DOWNLOAD (binary buffer) ---
-const downloadFile = async (pfx, name) => {
-  const full = pfx ? `${pfx}/${name}` : name;
-  const { data, error } = await storage.download(full);
+// --- DOWNLOAD ---
+const downloadFile = async (path) => {
+  const { data, error } = await storage.download(path);
   if (error) throw error;
 
   const buf = Buffer.from(await data.arrayBuffer());
-  console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
+  console.log("DEBUG >>>", path, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
   // MIME signature check
   const sig = buf.slice(0, 4).toString("hex");
   if (!sig.startsWith("ffd8") && sig !== "89504e47") {
-    console.error("❌ Geçersiz dosya, muhtemelen HTML:", buf.toString("utf8").slice(0,200));
+    console.error("❌ Geçersiz dosya:", buf.toString("utf8").slice(0,200));
     return null;
   }
 
-  return { buf, full };
+  return buf;
 };
 
 // --- UPLOAD ---
@@ -69,24 +72,30 @@ const removeFile = async (srcPath) => {
 
 // --- MAIN ---
 (async () => {
-  const files = await listOnce(prefix);
-  if (!files.length) {
-    console.log("Hiç dosya yok");
-    return;
+  let targets = [];
+
+  if (explicitPaths.length) {
+    targets = explicitPaths;
+  } else {
+    const files = await listOnce(prefix);
+    if (!files.length) {
+      console.log("Hiç dosya yok");
+      return;
+    }
+    targets = files.map(f => prefix ? `${prefix}/${f.name}` : f.name);
   }
 
-  for (const f of files) {
-    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+  for (const srcPath of targets) {
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
     console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-    const file = await downloadFile(prefix, f.name);
-    if (!file) {
+    const buf = await downloadFile(srcPath);
+    if (!buf) {
       console.log("⚠️ Atlandı:", srcPath);
       continue;
     }
 
-    const webpBuf = await sharp(file.buf).webp({ quality }).toBuffer();
+    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
