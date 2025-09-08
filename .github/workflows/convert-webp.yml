@@ -6,10 +6,6 @@ on:
       prefix:
         description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/oppo)"
         required: true
-      quality:
-        description: "WebP kalite (1-100)"
-        required: false
-        default: "82"
       update_db:
         description: "products.image_url güncellensin mi?"
         required: false
@@ -18,26 +14,34 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    concurrency:
-      group: convert-webp
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
-      - run: npm install @squoosh/lib @supabase/supabase-js --no-audit --no-fund
-      - name: Convert
+      - run: npm install @supabase/supabase-js --no-audit --no-fund
+      - run: npm install -g @squoosh/cli
+
+      - name: Convert + Upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
           BUCKET: ${{ secrets.BUCKET }}
           PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
-          NODE_OPTIONS: "--experimental-wasm-modules --no-warnings"
         run: |
-          node scripts/convert-webp.mjs \
+          # 1) Prefix altındaki dosyaları indir
+          mkdir -p input
+          node scripts/download-prefix.mjs --prefix "${{ github.event.inputs.prefix }}" --out ./input
+
+          # 2) JPG/PNG -> WebP çevir
+          for f in ./input/*.{jpg,jpeg,png}; do
+            [ -e "$f" ] || continue
+            squoosh-cli --webp auto "$f"
+          done
+
+          # 3) Supabase’e yükle ve DB güncelle
+          node scripts/upload-webp.mjs \
             --prefix "${{ github.event.inputs.prefix }}" \
-            --quality "${{ github.event.inputs.quality }}" \
             ${{ github.event.inputs.update_db == 'true' && '--update-db' || '' }}
