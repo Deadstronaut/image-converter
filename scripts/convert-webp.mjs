@@ -3,7 +3,7 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
-// env kontrolü
+// --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 const BUCKET = process.env.BUCKET;
@@ -14,7 +14,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   process.exit(1);
 }
 
-// argümanlar
+// --- ARGS ---
 const getArg = (n, d = null) => {
   const i = process.argv.indexOf(`--${n}`);
   return i > -1 ? process.argv[i + 1] : d;
@@ -23,7 +23,7 @@ const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
 
-// supabase istemcisi
+// --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const storage = supabase.storage.from(BUCKET);
 const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
@@ -31,12 +31,14 @@ const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 const tmpDir = "./input";
 fs.mkdirSync(tmpDir, { recursive: true });
 
+// --- LIST ---
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
   if (error) throw error;
   return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
 };
 
+// --- DOWNLOAD (public URL) ---
 const downloadFile = async (pfx, name) => {
   const full = pfx ? `${pfx}/${name}` : name;
   const url = publicBase + full;
@@ -45,7 +47,6 @@ const downloadFile = async (pfx, name) => {
   if (!res.ok) throw new Error(`Download fail ${url} → ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
 
-  // 🔎 Debug
   console.log("DEBUG >>>", full, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
 
   const out = path.join(tmpDir, name);
@@ -53,8 +54,7 @@ const downloadFile = async (pfx, name) => {
   return out;
 };
 
-
-
+// --- UPLOAD ---
 const uploadFile = async (dstPath, buf) => {
   const { error } = await storage.upload(dstPath, buf, {
     contentType: "image/webp",
@@ -63,11 +63,13 @@ const uploadFile = async (dstPath, buf) => {
   if (error) throw error;
 };
 
+// --- REMOVE ---
 const removeFile = async (srcPath) => {
   const { error } = await storage.remove([srcPath]);
   if (error) throw error;
 };
 
+// --- MAIN ---
 (async () => {
   const files = await listOnce(prefix);
   if (!files.length) {
@@ -79,8 +81,8 @@ const removeFile = async (srcPath) => {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
     const localPath = await downloadFile(prefix, f.name);
-    const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
 
+    const webpBuf = await sharp(localPath).webp({ quality }).toBuffer();
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
@@ -97,12 +99,3 @@ const removeFile = async (srcPath) => {
     console.log(`Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
-
-
-
-
-
-
-
-
-
