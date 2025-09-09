@@ -14,12 +14,27 @@ on:
         description: "products.image_url güncellensin mi?"
         type: boolean
         default: false
+      trace:                      # 🔹 YENİ
+        description: "İzleme ID (UI/API tarafından atanır)"
+        required: true
+        default: "manual"
+
+run-name: webp-${{ inputs.trace }}   # 🔹 YENİ: run listesinde ayırt edilebilir
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Print inputs
+        run: |
+          echo "prefix=${{ inputs.prefix }}"
+          echo "quality=${{ inputs.quality }}"
+          echo "update_db=${{ inputs.update_db }}"
+          echo "trace=${{ inputs.trace }}"
+          echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -34,6 +49,6 @@ jobs:
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
         run: |
           node scripts/convert-webp.mjs \
-            --prefix "${{ github.event.inputs.prefix }}" \
-            --quality "${{ github.event.inputs.quality }}" \
-            ${{ github.event.inputs.update_db && '--update-db' || '' }}
+            --prefix "${{ inputs.prefix }}" \
+            --quality "${{ inputs.quality }}" \
+            ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
