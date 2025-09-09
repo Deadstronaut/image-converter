@@ -14,10 +14,6 @@ on:
         description: "products.image_url güncellensin mi?"
         type: boolean
         default: false
-      trace:                      # 🔹 YENİ
-        description: "İzleme ID (UI/API tarafından atanır)"
-        required: true
-        default: "manual"
 
 jobs:
   run:
