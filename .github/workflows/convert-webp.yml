@@ -19,8 +19,6 @@ on:
         required: true
         default: "manual"
 
-run-name: webp-${{ inputs.trace }}   # 🔹 YENİ: run listesinde ayırt edilebilir
-
 jobs:
   run:
     runs-on: ubuntu-latest
