@@ -14,12 +14,6 @@ on:
         description: "products.image_url güncellensin mi?"
         type: boolean
         default: false
-      trace:
-        description: "Run trace id (UI izleme için)"
-        required: false
-        default: ""
-
-run-name: webp-${{ inputs.trace || github.run_id }}
 
 jobs:
   run:
