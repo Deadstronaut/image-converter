@@ -5,7 +5,7 @@ on:
     inputs:
       prefix:
         description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
-        required: true
+        required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
