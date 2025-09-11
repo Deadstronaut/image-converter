@@ -74,16 +74,18 @@ const removeFile = async (srcPath) => {
 (async () => {
   let targets = [];
 
-  if (explicitPaths.length) {
-    targets = explicitPaths;
-  } else {
-    const files = await listOnce(prefix);
-    if (!files.length) {
-      console.log("Hiç dosya yok");
-      return;
-    }
-    targets = files.map(f => prefix ? `${prefix}/${f.name}` : f.name);
+if (explicitPaths.length) {
+  targets = explicitPaths;
+} else {
+  const files = await listOnce(prefix);
+  if (!files.length) {
+    console.log("Hiç dosya yok");
+    return;
   }
+  targets = files
+    .map(f => prefix ? `${prefix}/${f.name}` : f.name)
+    .filter(name => !prefix || name.startsWith(prefix));
+}
 
   for (const srcPath of targets) {
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
@@ -112,3 +114,4 @@ const removeFile = async (srcPath) => {
     console.log(`✅ Dönüştürüldü: ${srcPath} → ${dstPath}`);
   }
 })();
+
