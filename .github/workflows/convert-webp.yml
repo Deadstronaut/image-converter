@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/oppo)"
+        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
         required: true
       quality:
         description: "WebP kalite (1-100)"
@@ -13,7 +13,7 @@ on:
       update_db:
         description: "products.image_url güncellensin mi?"
         type: boolean
-        default: false
+        default: true
 
 jobs:
   run:
