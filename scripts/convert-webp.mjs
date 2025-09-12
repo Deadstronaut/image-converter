@@ -1,8 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import { execSync } from "child_process";
+import { remove } from "rembg-node"; // ✅ JS rembg
 import fs from "fs";
-import path from "path";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -62,15 +61,6 @@ const removeFile = async (srcPath) => {
   if (error) throw error;
 };
 
-// --- REMBG ---
-async function removeBg(buf, tmpName) {
-  const inPath = path.join("/tmp", tmpName + ".jpg");
-  const outPath = path.join("/tmp", tmpName + ".png");
-  fs.writeFileSync(inPath, buf);
-  execSync(`rembg i ${inPath} ${outPath}`);
-  return fs.readFileSync(outPath);
-}
-
 // --- MAIN ---
 (async () => {
   let targets = [];
@@ -98,8 +88,10 @@ async function removeBg(buf, tmpName) {
       continue;
     }
 
-    // Arka planı sil → PNG → WebP
-    const pngBuf = await removeBg(buf, Date.now().toString());
+    // ✅ Arka planı sil (rembg-node)
+    const pngBuf = await remove(buf);
+
+    // ✅ WebP dönüştür
     const webpBuf = await sharp(pngBuf).webp({ quality }).toBuffer();
 
     await uploadFile(dstPath, webpBuf);
