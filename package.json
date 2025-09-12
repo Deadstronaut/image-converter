@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
+    "rembg-node": "^2.0.0",
     "sharp": "^0.34.3"
   }
 }
