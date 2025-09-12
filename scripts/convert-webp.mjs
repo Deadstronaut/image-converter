@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import { remove } from "rembg-node"; // ✅ JS rembg
+import { execSync } from "child_process";
 import fs from "fs";
+import path from "path";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -22,10 +23,6 @@ const getArg = (n, d = null) => {
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
-const pathsArg = getArg("paths", "");
-const explicitPaths = pathsArg
-  ? pathsArg.split(",").map(p => p.trim()).filter(Boolean)
-  : [];
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -61,37 +58,31 @@ const removeFile = async (srcPath) => {
   if (error) throw error;
 };
 
+// --- REMBG ---
+async function removeBg(buf, tmpName) {
+  const inPath = path.join("/tmp", tmpName + ".jpg");
+  const outPath = path.join("/tmp", tmpName + ".png");
+  fs.writeFileSync(inPath, buf);
+  execSync(`rembg i ${inPath} ${outPath}`);
+  return fs.readFileSync(outPath);
+}
+
 // --- MAIN ---
 (async () => {
-  let targets = [];
-
-  if (explicitPaths.length) {
-    targets = explicitPaths;
-  } else {
-    const files = await listOnce(prefix);
-    if (!files.length) {
-      console.log("Hiç dosya yok");
-      return;
-    }
-    targets = files
-      .map(f => prefix ? `${prefix}/${f.name}` : f.name)
-      .filter(name => !prefix || name.startsWith(prefix));
+  const files = await listOnce(prefix);
+  if (!files.length) {
+    console.log("Hiç dosya yok");
+    return;
   }
-
-  for (const srcPath of targets) {
+  for (const f of files) {
+    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
     console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
     const buf = await downloadFile(srcPath);
-    if (!buf) {
-      console.log("⚠️ Atlandı:", srcPath);
-      continue;
-    }
+    if (!buf) continue;
 
-    // ✅ Arka planı sil (rembg-node)
-    const pngBuf = await remove(buf);
-
-    // ✅ WebP dönüştür
+    const pngBuf = await removeBg(buf, Date.now().toString());
     const webpBuf = await sharp(pngBuf).webp({ quality }).toBuffer();
 
     await uploadFile(dstPath, webpBuf);
@@ -107,6 +98,6 @@ const removeFile = async (srcPath) => {
       if (error) console.error("DB update err:", error.message);
     }
 
-    console.log(`✅ Dönüştürüldü (bg removed): ${srcPath} → ${dstPath}`);
+    console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
