@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -20,7 +23,7 @@ const getArg = (n, d = null) => {
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
-const pathsArg = getArg("paths", ""); // yeni: tek/çok dosya
+const pathsArg = getArg("paths", "");
 const explicitPaths = pathsArg
   ? pathsArg.split(",").map(p => p.trim()).filter(Boolean)
   : [];
@@ -41,18 +44,7 @@ const listOnce = async (pfx) => {
 const downloadFile = async (path) => {
   const { data, error } = await storage.download(path);
   if (error) throw error;
-
-  const buf = Buffer.from(await data.arrayBuffer());
-  console.log("DEBUG >>>", path, "size:", buf.length, "first20:", buf.slice(0,20).toString("hex"));
-
-  // MIME signature check
-  const sig = buf.slice(0, 4).toString("hex");
-  if (!sig.startsWith("ffd8") && sig !== "89504e47") {
-    console.error("❌ Geçersiz dosya:", buf.toString("utf8").slice(0,200));
-    return null;
-  }
-
-  return buf;
+  return Buffer.from(await data.arrayBuffer());
 };
 
 // --- UPLOAD ---
@@ -70,22 +62,31 @@ const removeFile = async (srcPath) => {
   if (error) throw error;
 };
 
+// --- REMBG ---
+async function removeBg(buf, tmpName) {
+  const inPath = path.join("/tmp", tmpName + ".jpg");
+  const outPath = path.join("/tmp", tmpName + ".png");
+  fs.writeFileSync(inPath, buf);
+  execSync(`rembg i ${inPath} ${outPath}`);
+  return fs.readFileSync(outPath);
+}
+
 // --- MAIN ---
 (async () => {
   let targets = [];
 
-if (explicitPaths.length) {
-  targets = explicitPaths;
-} else {
-  const files = await listOnce(prefix);
-  if (!files.length) {
-    console.log("Hiç dosya yok");
-    return;
+  if (explicitPaths.length) {
+    targets = explicitPaths;
+  } else {
+    const files = await listOnce(prefix);
+    if (!files.length) {
+      console.log("Hiç dosya yok");
+      return;
+    }
+    targets = files
+      .map(f => prefix ? `${prefix}/${f.name}` : f.name)
+      .filter(name => !prefix || name.startsWith(prefix));
   }
-  targets = files
-    .map(f => prefix ? `${prefix}/${f.name}` : f.name)
-    .filter(name => !prefix || name.startsWith(prefix));
-}
 
   for (const srcPath of targets) {
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
@@ -97,7 +98,10 @@ if (explicitPaths.length) {
       continue;
     }
 
-    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
+    // Arka planı sil → PNG → WebP
+    const pngBuf = await removeBg(buf, Date.now().toString());
+    const webpBuf = await sharp(pngBuf).webp({ quality }).toBuffer();
+
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
@@ -111,7 +115,6 @@ if (explicitPaths.length) {
       if (error) console.error("DB update err:", error.message);
     }
 
-    console.log(`✅ Dönüştürüldü: ${srcPath} → ${dstPath}`);
+    console.log(`✅ Dönüştürüldü (bg removed): ${srcPath} → ${dstPath}`);
   }
 })();
-
