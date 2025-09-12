@@ -39,7 +39,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install "numpy<2"
           pip install onnxruntime==1.17.3
-          pip install rembg==2.0.50 --no-deps
+          pip install "rembg[cli]==2.0.50"
           pip install "numpy<2" scikit-image==0.22.0 pillow==10.4.0 pymatting==1.1.14 tqdm==4.66.4 opencv-python-headless==4.10.0.84 pooch==1.8.2
 
       - name: Convert & Upload
