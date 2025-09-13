@@ -1,39 +1,57 @@
-import sys
-import cv2
+# scripts/refine_bg.py
+import os, io
 import numpy as np
 from rembg import remove
 from PIL import Image
+from supabase import create_client
 
-if len(sys.argv) < 3:
-    print("Usage: python refine_bg.py input.jpg output.png")
-    sys.exit(1)
+# --- ENV ---
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SERVICE_ROLE_KEY = os.environ["SERVICE_ROLE_KEY"]
+BUCKET = os.environ["BUCKET"]
+PRODUCTS_TABLE = os.getenv("PRODUCTS_TABLE", "products")
+IMAGE_COLUMN = os.getenv("IMAGE_COLUMN", "image_url")
 
-inp, outp = sys.argv[1], sys.argv[2]
+supabase = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+storage = supabase.storage.from_(BUCKET)
 
-# --- Load input
-with open(inp, "rb") as f:
-    input_bytes = f.read()
+# --- PARAMS ---
+SESSION_OPTS = {
+    "model": "isnet-general-use",
+    "alpha_matting": True,
+    "alpha_matting_foreground_threshold": 200,  # ↑ düşerse daha fazla detay
+    "alpha_matting_background_threshold": 25,   # ↑ artarsa daha fazla silme
+    "alpha_matting_erode_size": 1               # 0 → hiç aşındırma, 1 → hafif
+}
 
-# --- Remove BG
-result = remove(input_bytes, alpha_matting=True,
-                alpha_matting_foreground_threshold=220,
-                alpha_matting_background_threshold=30,
-                alpha_matting_erode_size=1)
+QUALITY = 82
 
-# --- Convert to numpy for refinement
-image = Image.open(io.BytesIO(result)).convert("RGBA")
-arr = np.array(image)
+def process_file(path):
+    # indir
+    res = storage.download(path)
+    if not res:
+        print(f"Skip: {path}")
+        return
 
-# --- Extract alpha channel
-alpha = arr[:, :, 3]
+    img = Image.open(io.BytesIO(res)).convert("RGBA")
 
-# --- Smooth edges (morph + blur)
-kernel = np.ones((3, 3), np.uint8)
-alpha = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, kernel, iterations=1)
-alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
+    # rembg
+    out = remove(img, **SESSION_OPTS)
 
-arr[:, :, 3] = alpha
+    # webp encode
+    buf = io.BytesIO()
+    out.save(buf, format="WEBP", quality=QUALITY)
+    buf.seek(0)
 
-# --- Save result
-Image.fromarray(arr).save(outp)
-print(f"✅ Saved refined: {outp}")
+    # upload
+    new_path = path.rsplit(".",1)[0] + ".webp"
+    storage.upload(new_path, buf.getvalue(), {"content-type":"image/webp","upsert":True})
+    storage.remove([path])
+    print(f"✅ {path} → {new_path}")
+
+if __name__ == "__main__":
+    # şimdilik tüm bucket içindekileri tek seferde çalıştırıyor
+    data = storage.list("", {"limit":1000})
+    for f in data:
+        if f["name"].lower().endswith((".jpg",".jpeg",".png")):
+            process_file(f["name"])
