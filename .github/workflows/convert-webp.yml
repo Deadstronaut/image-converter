@@ -9,7 +9,7 @@ on:
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "82"
+        default: "8"
       update_db:
         description: "products.image_url güncellensin mi?"
         type: boolean
