@@ -70,4 +70,6 @@ jobs:
           pip install --force-reinstall onnxruntime==1.17.3
 
       - name: Run refine_bg.py (opsiyonel)
+        env:
+          REFINE_MODE: ${{ inputs.refine_mode }}
         run: python scripts/refine_bg.py
