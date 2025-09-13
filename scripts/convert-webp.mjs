@@ -91,30 +91,41 @@ async function refineBg(buf, tmpName) {
     console.log("Hiç dosya yok");
     return;
   }
-  for (const f of files) {
-    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
-    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
+for (const f of files) {
+  const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+  const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+  console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-    const buf = await downloadFile(srcPath);
-    if (!buf) continue;
+  const buf = await downloadFile(srcPath);
+  if (!buf) continue;
 
-    const refinedBuf = await refineBg(buf, Date.now().toString());
-    const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
-
+  // --- Test Folder special case ---
+  if (srcPath.toLowerCase().includes("test-folder")) {
+    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
     await uploadFile(dstPath, webpBuf);
-    await removeFile(srcPath);
-
-    if (updateDB) {
-      const oldUrl = publicBase + srcPath;
-      const newUrl = publicBase + dstPath;
-      const { error } = await supabase
-        .from(PRODUCTS_TABLE)
-        .update({ [IMAGE_COLUMN]: newUrl })
-        .eq(IMAGE_COLUMN, oldUrl);
-      if (error) console.error("DB update err:", error.message);
-    }
-
-    console.log(`✅ ${srcPath} → ${dstPath}`);
+    console.log(`⚡ Test Folder skip: sadece WebP → ${dstPath}`);
+    continue; // refine + db update yok
   }
+
+  // --- Normal refine ---
+  const refinedBuf = await refineBg(buf, Date.now().toString());
+  const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
+
+  await uploadFile(dstPath, webpBuf);
+  await removeFile(srcPath);
+
+  if (updateDB) {
+    const oldUrl = publicBase + srcPath;
+    const newUrl = publicBase + dstPath;
+    const { error } = await supabase
+      .from(PRODUCTS_TABLE)
+      .update({ [IMAGE_COLUMN]: newUrl })
+      .eq(IMAGE_COLUMN, oldUrl);
+    if (error) console.error("DB update err:", error.message);
+  }
+
+  console.log(`✅ ${srcPath} → ${dstPath}`);
+}
+
 })();
+
