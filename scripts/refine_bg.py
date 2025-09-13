@@ -15,6 +15,35 @@ IMAGE_COLUMN = os.getenv("IMAGE_COLUMN", "image_url")
 supabase = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 storage = supabase.storage.from_(BUCKET)
 
+# --- PRESETS ---
+PRESETS = {
+    "soft": {
+        "model": "isnet-general-use",
+        "alpha_matting": True,
+        "alpha_matting_foreground_threshold": 180,
+        "alpha_matting_background_threshold": 40,
+        "alpha_matting_erode_size": 0
+    },
+    "normal": {
+        "model": "isnet-general-use",
+        "alpha_matting": True,
+        "alpha_matting_foreground_threshold": 200,
+        "alpha_matting_background_threshold": 25,
+        "alpha_matting_erode_size": 1
+    },
+    "aggressive": {
+        "model": "isnet-general-use",
+        "alpha_matting": True,
+        "alpha_matting_foreground_threshold": 220,
+        "alpha_matting_background_threshold": 15,
+        "alpha_matting_erode_size": 2
+    }
+}
+
+# preset seçimi
+MODE = os.getenv("REFINE_MODE", "normal")  # workflow input ile gelir
+SESSION_OPTS = PRESETS.get(MODE, PRESETS["normal"])
+
 # --- PARAMS ---
 SESSION_OPTS = {
     "model": "isnet-general-use",
