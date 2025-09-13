@@ -63,7 +63,7 @@ async function removeBg(buf, tmpName) {
   const inPath = path.join("/tmp", tmpName + ".jpg");
   const outPath = path.join("/tmp", tmpName + ".png");
   fs.writeFileSync(inPath, buf);
-  execSync(`rembg i ${inPath} ${outPath}`);
+  execSync(`rembg i --model u2netp --alpha-matte 15 ${inPath} ${outPath}`);
   return fs.readFileSync(outPath);
 }
 
@@ -101,3 +101,4 @@ async function removeBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
