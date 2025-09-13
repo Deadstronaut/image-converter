@@ -33,7 +33,7 @@ on:
       blur_radius:
         description: "Kenar yumuşatma (Gaussian blur radius)"
         required: true
-        default: "1.0"
+        default: "0.0"
 
 jobs:
   run:
