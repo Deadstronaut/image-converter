@@ -10,6 +10,8 @@ const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 const BUCKET = process.env.BUCKET;
 const PRODUCTS_TABLE = process.env.PRODUCTS_TABLE || "products";
 const IMAGE_COLUMN = process.env.IMAGE_COLUMN || "image_url";
+const REFINE_MODE = process.env.REFINE_MODE || "normal"; // soft|normal|aggressive
+
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   console.error("Eksik env: SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET");
   process.exit(1);
@@ -58,24 +60,15 @@ const removeFile = async (srcPath) => {
   if (error) throw error;
 };
 
-// --- REMBG ---
-async function removeBg(buf, tmpName) {
+// --- CALL REFINE ---
+async function refineBg(buf, tmpName) {
   const inPath = path.join("/tmp", tmpName + ".jpg");
-  const outPath = path.join("/tmp", tmpName + ".png");
+  const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  const cmd = [
-    "rembg i",
-    "--model isnet-general-use",
-    "--alpha-matting",
-    "--alpha-matting-foreground-threshold 210",
-    "--alpha-matting-background-threshold 30",
-    "--alpha-matting-erode-size 1",
-    inPath,
-    outPath,
-  ].join(" ");
+  // refine_bg.py çağırılıyor
+  execSync(`python scripts/refine_bg.py ${inPath} ${outPath} ${REFINE_MODE}`);
 
-  execSync(cmd);
   return fs.readFileSync(outPath);
 }
 
@@ -94,8 +87,8 @@ async function removeBg(buf, tmpName) {
     const buf = await downloadFile(srcPath);
     if (!buf) continue;
 
-    const pngBuf = await removeBg(buf, Date.now().toString());
-    const webpBuf = await sharp(pngBuf).webp({ quality }).toBuffer();
+    const refinedBuf = await refineBg(buf, Date.now().toString());
+    const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
 
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
