@@ -63,7 +63,19 @@ async function removeBg(buf, tmpName) {
   const inPath = path.join("/tmp", tmpName + ".jpg");
   const outPath = path.join("/tmp", tmpName + ".png");
   fs.writeFileSync(inPath, buf);
-  execSync(`rembg i --model u2netp --alpha-matting --alpha-matting-erode-size 15 ${inPath} ${outPath}`);
+
+  const cmd = [
+    "rembg i",
+    "--model isnet-general-use",
+    "--alpha-matting",
+    "--alpha-matting-foreground-threshold 240",
+    "--alpha-matting-background-threshold 10",
+    "--alpha-matting-erode-size 10",
+    inPath,
+    outPath,
+  ].join(" ");
+
+  execSync(cmd);
   return fs.readFileSync(outPath);
 }
 
@@ -101,5 +113,3 @@ async function removeBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
-
-
