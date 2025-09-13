@@ -23,8 +23,8 @@ PRESETS = {
     "soft": {
         "model": "isnet-general-use",
         "alpha_matting": True,
-        "alpha_matting_foreground_threshold": 180,
-        "alpha_matting_background_threshold": 40,
+        "alpha_matting_foreground_threshold": 200,
+        "alpha_matting_background_threshold": 30,
         "alpha_matting_erode_size": 0,
     },
     "normal": {
