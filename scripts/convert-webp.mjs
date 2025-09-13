@@ -69,8 +69,8 @@ async function removeBg(buf, tmpName) {
     "--model isnet-general-use",
     "--alpha-matting",
     "--alpha-matting-foreground-threshold 220",
-    "--alpha-matting-background-threshold 20",
-    "--alpha-matting-erode-size 3",
+    "--alpha-matting-background-threshold 30",
+    "--alpha-matting-erode-size 2",
     inPath,
     outPath,
   ].join(" ");
@@ -113,6 +113,7 @@ async function removeBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
 
 
 
