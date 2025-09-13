@@ -26,27 +26,28 @@ PRESETS = {
 }
 opts = PRESETS.get(mode, PRESETS["normal"])
 
-# --- Remove BG ---
+# --- Load image ---
 with open(in_path, "rb") as f:
     inp = f.read()
 img = Image.open(io.BytesIO(inp)).convert("RGBA")
-out = remove(img, **opts)
 
-# --- Refine mask with OpenCV ---
-arr = np.array(out)
-alpha = arr[:, :, 3]
+# --- Get mask only ---
+mask = remove(img, only_mask=True, **opts)
+mask = np.array(mask)
 
-# Closing (fill small holes) + Opening (remove noise)
+# --- Refine mask ---
 kernel = np.ones((3, 3), np.uint8)
-alpha = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, kernel, iterations=1)
-alpha = cv2.morphologyEx(alpha, cv2.MORPH_OPEN, kernel, iterations=1)
+mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
 
 # Feather edges
-alpha_img = Image.fromarray(alpha)
-alpha_img = alpha_img.filter(ImageFilter.GaussianBlur(radius=1))
+mask_img = Image.fromarray(mask)
+mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=1))
+mask = np.array(mask_img)
 
-# Recombine RGBA
-arr[:, :, 3] = np.array(alpha_img)
+# --- Apply mask back ---
+arr = np.array(img)
+arr[:, :, 3] = mask
 refined = Image.fromarray(arr, mode="RGBA")
 
 refined.save(out_path, format="PNG")
