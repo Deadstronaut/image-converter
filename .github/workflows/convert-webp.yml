@@ -42,9 +42,6 @@ jobs:
           pip install "rembg[cli]==2.0.50"
           pip install scikit-image==0.22.0 pillow==10.4.0 pymatting==1.1.14 tqdm==4.66.4 opencv-python-headless==4.10.0.84 pooch==1.8.2
 
-      - name: Run refine_bg.py (opsiyonel)
-        run: python scripts/refine_bg.py
-
       - name: Convert & Upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -57,3 +54,11 @@ jobs:
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
+
+      - name: Force numpy<2 before refine
+        run: |
+          pip install --upgrade "numpy<2"
+          pip install --force-reinstall onnxruntime==1.17.3
+
+      - name: Run refine_bg.py (opsiyonel)
+        run: python scripts/refine_bg.py
