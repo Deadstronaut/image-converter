@@ -19,9 +19,10 @@ PRESETS = {
     "normal": {
         "model": "isnet-general-use",
         "alpha_matting": True,
-        "alpha_matting_foreground_threshold": 220,
-        "alpha_matting_background_threshold": 30,
+        "alpha_matting_foreground_threshold": 210,  # önce 220 idi
+        "alpha_matting_background_threshold": 40,   # önce 30 idi
         "alpha_matting_erode_size": 1,
+        "blur_radius": 0.5                          # biz ekliyoruz
     }
 }
 opts = PRESETS.get(mode, PRESETS["normal"])
