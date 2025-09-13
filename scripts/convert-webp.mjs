@@ -71,7 +71,6 @@ async function removeBg(buf, tmpName) {
     "--alpha-matting-foreground-threshold 240",
     "--alpha-matting-background-threshold 10",
     "--alpha-matting-erode-size 5",
-    "--alpha-matting-base-size 2048",
     inPath,
     outPath,
   ].join(" ");
@@ -79,7 +78,6 @@ async function removeBg(buf, tmpName) {
   execSync(cmd);
   return fs.readFileSync(outPath);
 }
-
 
 // --- MAIN ---
 (async () => {
@@ -115,4 +113,5 @@ async function removeBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
 
