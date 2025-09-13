@@ -10,7 +10,12 @@ const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 const BUCKET = process.env.BUCKET;
 const PRODUCTS_TABLE = process.env.PRODUCTS_TABLE || "products";
 const IMAGE_COLUMN = process.env.IMAGE_COLUMN || "image_url";
-const REFINE_MODE = process.env.REFINE_MODE || "normal"; // soft|normal|aggressive
+
+const FG_THRESHOLD = process.env.FG_THRESHOLD || "220";
+const BG_THRESHOLD = process.env.BG_THRESHOLD || "30";
+const ERODE_SIZE   = process.env.ERODE_SIZE   || "1";
+const FILL_HOLES   = process.env.FILL_HOLES   || "true";
+const BLUR_RADIUS  = process.env.BLUR_RADIUS  || "1.0";
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   console.error("Eksik env: SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET");
@@ -66,8 +71,15 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  // refine_bg.py çağırılıyor
-  execSync(`python scripts/refine_bg.py ${inPath} ${outPath} ${REFINE_MODE}`);
+  // refine_bg.py çağırılıyor → artık parametreler ile
+  execSync(
+    `python scripts/refine_bg.py ${inPath} ${outPath} \
+    --fg ${FG_THRESHOLD} \
+    --bg ${BG_THRESHOLD} \
+    --erode ${ERODE_SIZE} \
+    --fill-holes ${FILL_HOLES} \
+    --blur ${BLUR_RADIUS}`
+  );
 
   return fs.readFileSync(outPath);
 }
