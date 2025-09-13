@@ -43,16 +43,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Force numpy<2 + stable onnxruntime
+      - name: Install Python deps (force numpy<2)
         run: |
           python -m pip install --upgrade pip
           pip install --force-reinstall "numpy<2"
           pip install --force-reinstall onnxruntime==1.17.3
-
-      - name: Install rembg + deps
-        run: |
-          pip install "rembg[cli]==2.0.50"
-          pip install scikit-image==0.22.0 pillow==10.4.0 pymatting==1.1.14 tqdm==4.66.4 opencv-python-headless==4.10.0.84 pooch==1.8.2
+          pip install "rembg[cli]==2.0.50" \
+                      scikit-image==0.22.0 \
+                      pillow==10.4.0 \
+                      pymatting==1.1.14 \
+                      tqdm==4.66.4 \
+                      opencv-python-headless==4.10.0.84 \
+                      pooch==1.8.2
 
       - name: Convert & Upload
         env:
