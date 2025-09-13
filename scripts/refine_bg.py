@@ -1,5 +1,5 @@
 # scripts/refine_bg.py
-import sys, io
+import sys, io, argparse
 import numpy as np
 import cv2
 from rembg import remove
@@ -9,47 +9,52 @@ from PIL import Image, ImageFilter
 if int(np.__version__.split(".")[0]) >= 2:
     raise RuntimeError("Use numpy<2 (NumPy 1.x)")
 
-if len(sys.argv) < 4:
-    print("Usage: python refine_bg.py <input> <output> <mode>")
-    sys.exit(1)
+# --- Args ---
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="Input image path")
+parser.add_argument("output", help="Output image path")
+parser.add_argument("--fg", type=int, default=220, help="Foreground threshold")
+parser.add_argument("--bg", type=int, default=30, help="Background threshold")
+parser.add_argument("--erode", type=int, default=1, help="Erode size")
+parser.add_argument("--fill-holes", type=lambda v: v.lower() in ("1","true","yes"), default=True)
+parser.add_argument("--blur", type=float, default=1.0, help="Gaussian blur radius")
+args = parser.parse_args()
 
-in_path, out_path, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+in_path, out_path = args.input, args.output
 
-PRESETS = {
-    "normal": {
-        "model": "isnet-general-use",
-        "alpha_matting": True,
-        "alpha_matting_foreground_threshold": 210,  # önce 220 idi
-        "alpha_matting_background_threshold": 40,   # önce 30 idi
-        "alpha_matting_erode_size": 1,
-        "blur_radius": 0.5                          # biz ekliyoruz
-    }
+opts = {
+    "model": "isnet-general-use",
+    "alpha_matting": True,
+    "alpha_matting_foreground_threshold": args.fg,
+    "alpha_matting_background_threshold": args.bg,
+    "alpha_matting_erode_size": args.erode,
 }
-opts = PRESETS.get(mode, PRESETS["normal"])
 
 # --- Load image ---
 with open(in_path, "rb") as f:
     inp = f.read()
 img = Image.open(io.BytesIO(inp)).convert("RGBA")
 
-# --- Get mask only ---
+# --- Get mask ---
 mask = remove(img, only_mask=True, **opts)
 mask = np.array(mask)
 
-# --- Refine mask ---
+# --- Morphological refinements ---
 kernel = np.ones((3, 3), np.uint8)
-mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+if args.fill_holes:
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
 mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
 
-# Feather edges
-mask_img = Image.fromarray(mask)
-mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=1))
-mask = np.array(mask_img)
+# --- Feather edges ---
+if args.blur > 0:
+    mask_img = Image.fromarray(mask)
+    mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=args.blur))
+    mask = np.array(mask_img)
 
-# --- Apply mask back ---
+# --- Apply mask ---
 arr = np.array(img)
 arr[:, :, 3] = mask
 refined = Image.fromarray(arr, mode="RGBA")
 
 refined.save(out_path, format="PNG")
-print(f"✅ Refined: {in_path} → {out_path} ({mode})")
+print(f"✅ Refined: {in_path} → {out_path} (fg={args.fg}, bg={args.bg}, erode={args.erode}, blur={args.blur}, fill_holes={args.fill_holes})")
