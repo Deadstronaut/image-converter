@@ -34,6 +34,10 @@ on:
         description: "Kenar yumuşatma (Gaussian blur radius)"
         required: false
         default: "0.0"
+      hard_mask:   # 🔹 yeni eklendi
+        description: "Hard mask (kenarları jilet gibi kes)"
+        required: false
+        default: "false"
 
 jobs:
   run:
@@ -83,4 +87,5 @@ jobs:
             --erode_size "${{ inputs.erode_size }}" \
             --fill_holes "${{ inputs.fill_holes }}" \
             --blur_radius "${{ inputs.blur_radius }}" \
+            --hard_mask "${{ inputs.hard_mask }}" \   # 🔹 yeni eklendi
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
