@@ -34,10 +34,23 @@ on:
         description: "Kenar yumuşatma (Gaussian blur radius)"
         required: false
         default: "0.0"
-      hard_mask:   # 🔹 yeni eklendi
+      hard_mask:
         description: "Hard mask (kenarları jilet gibi kes)"
         required: false
         default: "false"
+      model:   # 🔹 yeni eklenen dropdown
+        description: "Kullanılacak model"
+        required: false
+        default: "isnet-general-use"
+        type: choice
+        options:
+          - u2net
+          - u2netp
+          - u2net_human_seg
+          - isnet-general-use
+          - isnet-anime
+          - sam
+          - sam-hq
 
 jobs:
   run:
@@ -87,5 +100,6 @@ jobs:
             --erode_size "${{ inputs.erode_size }}" \
             --fill_holes "${{ inputs.fill_holes }}" \
             --blur_radius "${{ inputs.blur_radius }}" \
-            --hard_mask "${{ inputs.hard_mask }}" \   # 🔹 yeni eklendi
+            --hard_mask "${{ inputs.hard_mask }}" \
+            --model "${{ inputs.model }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
