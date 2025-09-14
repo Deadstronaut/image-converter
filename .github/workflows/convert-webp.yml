@@ -9,30 +9,30 @@ on:
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "8"
+        default: "82"
       update_db:
         description: "products.image_url güncellensin mi?"
-        type: boolean
-        default: true
+        required: false
+        default: "true"
       fg_threshold:
         description: "Foreground threshold"
-        required: true
+        required: false
         default: "220"
       bg_threshold:
         description: "Background threshold"
-        required: true
+        required: false
         default: "30"
       erode_size:
         description: "Erode size"
-        required: true
+        required: false
         default: "1"
       fill_holes:
         description: "Mask delikleri doldurulsun mu?"
-        type: boolean
-        default: true
+        required: false
+        default: "true"
       blur_radius:
         description: "Kenar yumuşatma (Gaussian blur radius)"
-        required: true
+        required: false
         default: "0.0"
 
 jobs:
@@ -74,13 +74,13 @@ jobs:
           BUCKET: ${{ secrets.BUCKET }}
           PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
-          FG_THRESHOLD: ${{ inputs.fg_threshold }}
-          BG_THRESHOLD: ${{ inputs.bg_threshold }}
-          ERODE_SIZE: ${{ inputs.erode_size }}
-          FILL_HOLES: ${{ inputs.fill_holes }}
-          BLUR_RADIUS: ${{ inputs.blur_radius }}
         run: |
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
+            --fg_threshold "${{ inputs.fg_threshold }}" \
+            --bg_threshold "${{ inputs.bg_threshold }}" \
+            --erode_size "${{ inputs.erode_size }}" \
+            --fill_holes "${{ inputs.fill_holes }}" \
+            --blur_radius "${{ inputs.blur_radius }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
