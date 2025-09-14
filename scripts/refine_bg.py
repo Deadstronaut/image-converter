@@ -18,12 +18,15 @@ parser.add_argument("--bg", type=int, default=30, help="Background threshold")
 parser.add_argument("--erode", type=int, default=1, help="Erode size")
 parser.add_argument("--fill-holes", type=lambda v: v.lower() in ("1","true","yes"), default=True)
 parser.add_argument("--blur", type=float, default=1.0, help="Gaussian blur radius")
+parser.add_argument("--model", type=str, default="isnet-general-use",
+    choices=["u2net","u2netp","u2net_human_seg","isnet-general-use","isnet-anime","sam","sam-hq"],
+    help="Kullanılacak model")
 args = parser.parse_args()
 
 in_path, out_path = args.input, args.output
 
 opts = {
-    "model": "isnet-general-use",
+    "model": args.model,
     "alpha_matting": True,
     "alpha_matting_foreground_threshold": args.fg,
     "alpha_matting_background_threshold": args.bg,
@@ -57,4 +60,4 @@ arr[:, :, 3] = mask
 refined = Image.fromarray(arr, mode="RGBA")
 
 refined.save(out_path, format="PNG")
-print(f"✅ Refined: {in_path} → {out_path} (fg={args.fg}, bg={args.bg}, erode={args.erode}, blur={args.blur}, fill_holes={args.fill_holes})")
+print(f"✅ Refined: {in_path} → {out_path} (model={args.model}, fg={args.fg}, bg={args.bg}, erode={args.erode}, blur={args.blur}, fill_holes={args.fill_holes})")
