@@ -1,3 +1,4 @@
+// scripts/convert-webp.mjs
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { execSync } from "child_process";
@@ -16,6 +17,7 @@ const BG_THRESHOLD = process.env.BG_THRESHOLD || "30";
 const ERODE_SIZE   = process.env.ERODE_SIZE   || "1";
 const FILL_HOLES   = process.env.FILL_HOLES   || "true";
 const BLUR_RADIUS  = process.env.BLUR_RADIUS  || "1.0";
+const MODEL        = process.env.MODEL        || "isnet-general-use";
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   console.error("Eksik env: SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET");
@@ -30,6 +32,7 @@ const getArg = (n, d = null) => {
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
+const modelArg = getArg("model", MODEL);
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -71,14 +74,14 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  // refine_bg.py çağırılıyor → artık parametreler ile
   execSync(
     `python scripts/refine_bg.py ${inPath} ${outPath} \
     --fg ${FG_THRESHOLD} \
     --bg ${BG_THRESHOLD} \
     --erode ${ERODE_SIZE} \
     --fill-holes ${FILL_HOLES} \
-    --blur ${BLUR_RADIUS}`
+    --blur ${BLUR_RADIUS} \
+    --model ${modelArg}`
   );
 
   return fs.readFileSync(outPath);
@@ -91,41 +94,38 @@ async function refineBg(buf, tmpName) {
     console.log("Hiç dosya yok");
     return;
   }
-for (const f of files) {
-  const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
-  const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-  console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
-  const buf = await downloadFile(srcPath);
-  if (!buf) continue;
+  for (const f of files) {
+    const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
+    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL:", modelArg);
 
-  // --- Test Folder special case ---
-  if (srcPath.toLowerCase().includes("test-folder")) {
-    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
+    const buf = await downloadFile(srcPath);
+    if (!buf) continue;
+
+    if (srcPath.toLowerCase().includes("test-folder")) {
+      const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
+      await uploadFile(dstPath, webpBuf);
+      console.log(`⚡ Test Folder skip: sadece WebP → ${dstPath}`);
+      continue;
+    }
+
+    const refinedBuf = await refineBg(buf, Date.now().toString());
+    const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
+
     await uploadFile(dstPath, webpBuf);
-    console.log(`⚡ Test Folder skip: sadece WebP → ${dstPath}`);
-    continue; // refine + db update yok
+    await removeFile(srcPath);
+
+    if (updateDB) {
+      const oldUrl = publicBase + srcPath;
+      const newUrl = publicBase + dstPath;
+      const { error } = await supabase
+        .from(PRODUCTS_TABLE)
+        .update({ [IMAGE_COLUMN]: newUrl })
+        .eq(IMAGE_COLUMN, oldUrl);
+      if (error) console.error("DB update err:", error.message);
+    }
+
+    console.log(`✅ ${srcPath} → ${dstPath}`);
   }
-
-  // --- Normal refine ---
-  const refinedBuf = await refineBg(buf, Date.now().toString());
-  const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
-
-  await uploadFile(dstPath, webpBuf);
-  await removeFile(srcPath);
-
-  if (updateDB) {
-    const oldUrl = publicBase + srcPath;
-    const newUrl = publicBase + dstPath;
-    const { error } = await supabase
-      .from(PRODUCTS_TABLE)
-      .update({ [IMAGE_COLUMN]: newUrl })
-      .eq(IMAGE_COLUMN, oldUrl);
-    if (error) console.error("DB update err:", error.message);
-  }
-
-  console.log(`✅ ${srcPath} → ${dstPath}`);
-}
-
 })();
-
