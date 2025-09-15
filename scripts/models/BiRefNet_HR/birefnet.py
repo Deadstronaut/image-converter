@@ -3,6 +3,16 @@
 import os
 import math
 from transformers import PretrainedConfig
+import torch
+
+try:
+    from transformers import PretrainedConfig, PreTrainedModel
+except ImportError:
+    class PretrainedConfig:
+        pass
+    class PreTrainedModel(torch.nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
 
 
 class Config(PretrainedConfig):
