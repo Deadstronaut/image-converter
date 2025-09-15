@@ -7,9 +7,10 @@ import torch
 try:
     from transformers import PretrainedConfig, PreTrainedModel
 except ImportError:
+    import torch.nn as nn
     class PretrainedConfig:
         pass
-    class PreTrainedModel(torch.nn.Module):
+    class PreTrainedModel(nn.Module):
         def __init__(self, *args, **kwargs):
             super().__init__()
 
