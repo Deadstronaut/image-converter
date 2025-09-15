@@ -39,7 +39,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install "numpy<2"
           pip install onnxruntime==1.16.3
-          pip install "rembg[cli]==2.0.50" \
+          pip install "rembg[cli]>=2.0.57" \
                       scikit-image==0.22.0 \
                       pillow==10.4.0 \
                       pymatting==1.1.14 \
