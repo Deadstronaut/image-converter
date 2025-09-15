@@ -1,5 +1,4 @@
 # scripts/models/BiRefNet_dynamic/BiRefNet_general_config.py
-
 import torch
 
 try:
