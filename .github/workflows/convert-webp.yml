@@ -14,53 +14,6 @@ on:
         description: "products.image_url güncellensin mi?"
         required: false
         default: "true"
-      model:
-        description: "Kullanılacak model"
-        required: false
-        default: "birefnet-massive"
-        type: choice
-        options:
-          - u2net
-          - u2netp
-          - u2net_human_seg
-          - u2net_cloth_seg
-          - silueta
-          - isnet-general-use
-          - isnet-anime
-          - sam
-          - sam-hq
-          - birefnet-general
-          - birefnet-general-lite
-          - birefnet-portrait
-          - birefnet-dis
-          - birefnet-hrsod
-          - birefnet-cod
-          - birefnet-massive
-          - manual   # 🔹 yeni eklendi
-      fg_threshold:
-        description: "Foreground threshold (sadece manual mod)"
-        required: false
-        default: "220"
-      bg_threshold:
-        description: "Background threshold (sadece manual mod)"
-        required: false
-        default: "30"
-      erode_size:
-        description: "Erode size (sadece manual mod)"
-        required: false
-        default: "1"
-      fill_holes:
-        description: "Mask delikleri doldurulsun mu? (sadece manual mod)"
-        required: false
-        default: "true"
-      blur_radius:
-        description: "Kenar yumuşatma (Gaussian blur radius, sadece manual mod)"
-        required: false
-        default: "0.0"
-      hard_mask:
-        description: "Hard mask (kenarları jilet gibi kes)"
-        required: false
-        default: "false"
 
 jobs:
   run:
@@ -105,11 +58,4 @@ jobs:
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
-            --fg_threshold "${{ inputs.fg_threshold }}" \
-            --bg_threshold "${{ inputs.bg_threshold }}" \
-            --erode_size "${{ inputs.erode_size }}" \
-            --fill_holes "${{ inputs.fill_holes }}" \
-            --blur_radius "${{ inputs.blur_radius }}" \
-            --hard_mask "${{ inputs.hard_mask }}" \
-            --model "${{ inputs.model }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
