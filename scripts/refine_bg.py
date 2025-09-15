@@ -4,10 +4,13 @@ from PIL import Image
 import torch
 import numpy as np
 from safetensors.torch import load_file
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+
 
 # --- Model importları ---
-from scripts.models.BiRefNet_dynamic.birefnet import BiRefNet as DynamicNet, BiRefNetConfig as DynamicConfig
-from scripts.models.BiRefNet_HR.birefnet import BiRefNet as HRNet, BiRefNetConfig as HRConfig
+from models.BiRefNet_dynamic.birefnet import BiRefNet as DynamicNet, BiRefNetConfig as DynamicConfig
+from models.BiRefNet_HR.birefnet import BiRefNet as HRNet, BiRefNetConfig as HRConfig
 
 
 def load_model(model_name: str):
