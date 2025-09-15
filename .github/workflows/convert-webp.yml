@@ -17,7 +17,7 @@ on:
       model:
         description: "Kullanılacak model"
         required: false
-        default: "birefnet-massive"
+        default: "sam-hq"
         type: choice
         options:
           - u2net
