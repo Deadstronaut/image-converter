@@ -2,7 +2,7 @@
 import sys, io, argparse
 import numpy as np
 import cv2
-from rembg import remove
+from rembg import remove, new_session
 from PIL import Image, ImageFilter
 
 # --- NumPy Guard ---
@@ -22,21 +22,14 @@ parser.add_argument("--model", type=str, default="birefnet-massive",
         "birefnet-dis","birefnet-hrsod","birefnet-cod","birefnet-massive"
     ],
     help="Kullanılacak model")
+parser.add_argument("--blur", type=float, default=1.0, help="Gaussian blur radius")
 args = parser.parse_args()
 
 in_path, out_path = args.input, args.output
 
-opts = {
-    "model": args.model,
-    "alpha_matting": False
-}
-
-# --- DEBUG ---
-print("🔍 RefineBG Debug")
-print("  Input:", in_path)
-print("  Output:", out_path)
-print("  Selected Model:", args.model)
-print("  Options:", opts)
+# --- Session ---
+print(f"📦 Loading model session: {args.model}")
+session = new_session(args.model)
 
 # --- Load image ---
 with open(in_path, "rb") as f:
@@ -44,14 +37,14 @@ with open(in_path, "rb") as f:
 img = Image.open(io.BytesIO(inp)).convert("RGBA")
 
 # --- Get mask ---
-try:
-    mask = remove(img, only_mask=True, **opts)
-    print("✅ remove() çalıştı, maske alındı")
-except Exception as e:
-    print("❌ remove() hata:", e)
-    sys.exit(1)
-
+mask = remove(img, only_mask=True, session=session)
 mask = np.array(mask)
+
+# --- Feather edges ---
+if args.blur > 0:
+    mask_img = Image.fromarray(mask)
+    mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=args.blur))
+    mask = np.array(mask_img)
 
 # --- Apply mask ---
 arr = np.array(img)
@@ -59,4 +52,4 @@ arr[:, :, 3] = mask
 refined = Image.fromarray(arr, mode="RGBA")
 
 refined.save(out_path, format="PNG")
-print(f"🎯 DONE: {in_path} → {out_path} (model={args.model})")
+print(f"✅ Refined: {in_path} → {out_path} (model={args.model}, blur={args.blur})")
