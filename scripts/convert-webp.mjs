@@ -23,6 +23,7 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
+const modelArg = getArg("model", "birefnet-massive");
 const updateDB = process.argv.includes("--update-db");
 
 // --- Supabase ---
@@ -65,7 +66,7 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  execSync(`python scripts/refine_bg.py ${inPath} ${outPath}`);
+  execSync(`python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`);
 
   return fs.readFileSync(outPath);
 }
@@ -81,21 +82,10 @@ async function refineBg(buf, tmpName) {
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL: birefnet-massive");
+    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL:", modelArg);
 
     const buf = await downloadFile(srcPath);
     if (!buf) continue;
-
-if (srcPath.toLowerCase().includes("test-folder")) {
-  // refine çalışsın
-  const refinedBuf = await refineBg(buf, Date.now().toString());
-  const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
-
-  // WebP yükle ama JPEG’i silme, DB update de yapma
-  await uploadFile(dstPath, webpBuf);
-  console.log(`⚡ Test Folder refine+webp (JPEG korundu, DB güncellenmedi) → ${dstPath}`);
-  continue;
-}
 
     const refinedBuf = await refineBg(buf, Date.now().toString());
     const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
@@ -116,4 +106,3 @@ if (srcPath.toLowerCase().includes("test-folder")) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
-
