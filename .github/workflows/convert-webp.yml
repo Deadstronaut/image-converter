@@ -15,17 +15,13 @@ on:
         required: false
         default: "true"
         type: choice
-        options:
-          - true
-          - false
+        options: [true, false]
       model:
         description: "Kullanılacak BiRefNet modeli"
         required: false
         default: "dynamic"
         type: choice
-        options:
-          - hr
-          - dynamic
+        options: [hr, dynamic]
 
 jobs:
   run:
@@ -51,7 +47,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install "numpy<2"
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-          pip install transformers pillow
+          pip install \
+            transformers \
+            pillow \
+            einops \
+            kornia \
+            timm \
+            safetensors \
+            tqdm \
+            scikit-image==0.22.0 \
+            opencv-python-headless==4.10.0.84
 
       - name: Convert & Upload
         env:
