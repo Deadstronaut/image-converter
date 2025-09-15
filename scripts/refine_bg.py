@@ -1,27 +1,26 @@
-# scripts/refine_bg.py
+import sys
+import io
 import argparse
 from rembg import remove
 from PIL import Image
-import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_path")
-    parser.add_argument("output_path")
-    parser.add_argument("--model", type=str, default="sam-hq")
+    parser.add_argument("input_path", help="Girdi görseli")
+    parser.add_argument("output_path", help="Çıktı görseli")
+    parser.add_argument("--model", default="u2net", help="Model adı (örn: u2net, u2netp, sam-hq, isnet-general, ...)")
     args = parser.parse_args()
 
-    with open(args.input_path, "rb") as i:
-        input_img = i.read()
+    with open(args.input_path, "rb") as f:
+        input_img = f.read()
 
-    # MODEL'i gerçekten args.model’den al
-    output = remove(
-        input_img,
-        model_name=args.model
-    )
+    # Sadece model_name parametresi
+    result = remove(input_img, model_name=args.model)
 
-    with open(args.output_path, "wb") as o:
-        o.write(output)
+    with open(args.output_path, "wb") as f:
+        f.write(result)
+
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
