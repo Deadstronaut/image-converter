@@ -86,12 +86,16 @@ async function refineBg(buf, tmpName) {
     const buf = await downloadFile(srcPath);
     if (!buf) continue;
 
-    if (srcPath.toLowerCase().includes("test-folder")) {
-      const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
-      await uploadFile(dstPath, webpBuf);
-      console.log(`⚡ Test Folder skip: sadece WebP → ${dstPath}`);
-      continue;
-    }
+if (srcPath.toLowerCase().includes("test-folder")) {
+  // refine çalışsın
+  const refinedBuf = await refineBg(buf, Date.now().toString());
+  const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
+
+  // WebP yükle ama JPEG’i silme, DB update de yapma
+  await uploadFile(dstPath, webpBuf);
+  console.log(`⚡ Test Folder refine+webp (JPEG korundu, DB güncellenmedi) → ${dstPath}`);
+  continue;
+}
 
     const refinedBuf = await refineBg(buf, Date.now().toString());
     const webpBuf = await sharp(refinedBuf).webp({ quality }).toBuffer();
@@ -112,3 +116,4 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
