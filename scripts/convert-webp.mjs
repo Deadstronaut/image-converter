@@ -17,7 +17,7 @@ const BG_THRESHOLD = process.env.BG_THRESHOLD || "30";
 const ERODE_SIZE   = process.env.ERODE_SIZE   || "1";
 const FILL_HOLES   = process.env.FILL_HOLES   || "true";
 const BLUR_RADIUS  = process.env.BLUR_RADIUS  || "1.0";
-const MODEL        = process.env.MODEL        || "isnet-general-use";
+const MODEL        = process.env.MODEL        || "birefnet-massive";
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   console.error("Eksik env: SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET");
@@ -74,16 +74,12 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  execSync(
-    `python scripts/refine_bg.py ${inPath} ${outPath} \
-    --fg ${FG_THRESHOLD} \
-    --bg ${BG_THRESHOLD} \
-    --erode ${ERODE_SIZE} \
-    --fill-holes ${FILL_HOLES} \
-    --blur ${BLUR_RADIUS} \
-    --model ${modelArg}`
-  );
+  let cmd = `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`;
+  if (modelArg === "manual") {
+    cmd += ` --fg ${FG_THRESHOLD} --bg ${BG_THRESHOLD} --erode ${ERODE_SIZE} --fill-holes ${FILL_HOLES} --blur ${BLUR_RADIUS}`;
+  }
 
+  execSync(cmd);
   return fs.readFileSync(outPath);
 }
 
