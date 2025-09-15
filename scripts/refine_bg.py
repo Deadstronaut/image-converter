@@ -43,6 +43,7 @@ with open(in_path, "rb") as f:
 img = Image.open(io.BytesIO(inp)).convert("RGBA")
 
 # --- Get mask ---
+print(f"🔍 DEBUG: remove() çağrılıyor → opts.model={opts['model']} (args.model={args.model})")
 mask = remove(img, only_mask=True, **opts)
 mask = np.array(mask)
 
