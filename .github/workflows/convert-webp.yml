@@ -14,6 +14,28 @@ on:
         description: "products.image_url güncellensin mi?"
         required: false
         default: "true"
+      model:
+        description: "Kullanılacak model"
+        required: false
+        default: "birefnet-massive"
+        type: choice
+        options:
+          - u2net
+          - u2netp
+          - u2net_human_seg
+          - u2net_cloth_seg
+          - silueta
+          - isnet-general-use
+          - isnet-anime
+          - sam
+          - sam-hq
+          - birefnet-general
+          - birefnet-general-lite
+          - birefnet-portrait
+          - birefnet-dis
+          - birefnet-hrsod
+          - birefnet-cod
+          - birefnet-massive
       fg_threshold:
         description: "Foreground threshold"
         required: false
@@ -38,28 +60,7 @@ on:
         description: "Hard mask (kenarları jilet gibi kes)"
         required: false
         default: "false"
-      model:
-        description: "Kullanılacak model"
-        required: false
-        default: "birefnet-massive"
-        type: choice
-        options:
-          - u2net
-          - u2netp
-          - u2net_human_seg
-          - u2net_cloth_seg
-          - silueta
-          - isnet-general-use
-          - isnet-anime
-          - sam
-          - sam-hq
-          - birefnet-general
-          - birefnet-general-lite
-          - birefnet-portrait
-          - birefnet-dis
-          - birefnet-hrsod
-          - birefnet-cod
-          - birefnet-massive
+
 
 
 jobs:
