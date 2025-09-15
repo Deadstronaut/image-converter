@@ -19,7 +19,11 @@ parser.add_argument("--erode", type=int, default=1, help="Erode size")
 parser.add_argument("--fill-holes", type=lambda v: v.lower() in ("1","true","yes"), default=True)
 parser.add_argument("--blur", type=float, default=1.0, help="Gaussian blur radius")
 parser.add_argument("--model", type=str, default="isnet-general-use",
-    choices=["u2net","u2netp","u2net_human_seg","isnet-general-use","isnet-anime","sam","sam-hq"],
+    choices=["u2net","u2netp","u2net_human_seg","u2net_cloth_seg","silueta",
+         "isnet-general-use","isnet-anime",
+         "sam","sam-hq",
+         "birefnet-general","birefnet-general-lite","birefnet-portrait",
+         "birefnet-dis","birefnet-hrsod","birefnet-cod","birefnet-massive"],
     help="Kullanılacak model")
 args = parser.parse_args()
 
