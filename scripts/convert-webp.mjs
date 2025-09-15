@@ -23,7 +23,6 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
-const modelArg = getArg("model", "birefnet-dynamic"); // default dynamic
 const updateDB = process.argv.includes("--update-db");
 
 // --- MODELS PATH ---
@@ -120,4 +119,5 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
 
