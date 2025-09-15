@@ -1,3 +1,4 @@
+// scripts/convert-webp.mjs
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { execSync } from "child_process";
@@ -22,7 +23,7 @@ const getArg = (n, d = null) => {
   return i > -1 ? process.argv[i + 1] : d;
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
-const quality = parseInt(getArg("quality", " 10"), 10);
+const quality = parseInt(getArg("quality", "82"), 10);
 const modelArg = getArg("model", "dynamic"); // hr | dynamic
 const updateDB = process.argv.includes("--update-db");
 
@@ -114,4 +115,3 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
-
