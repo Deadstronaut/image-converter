@@ -22,7 +22,7 @@ const getArg = (n, d = null) => {
   return i > -1 ? process.argv[i + 1] : d;
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
-const quality = parseInt(getArg("quality", "82"), 10);
+const quality = parseInt(getArg("quality", " 10"), 10);
 const modelArg = getArg("model", "dynamic"); // hr | dynamic
 const updateDB = process.argv.includes("--update-db");
 
@@ -114,3 +114,4 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
