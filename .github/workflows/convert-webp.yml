@@ -21,7 +21,7 @@ on:
         required: false
         default: "dynamic"
         type: choice
-        options: [hr, dynamic]
+        options: [hr, dynamic, general]   # ← general eklendi
 
 jobs:
   run:
