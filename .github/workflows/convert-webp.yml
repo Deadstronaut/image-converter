@@ -41,7 +41,7 @@ on:
       model:
         description: "Kullanılacak model"
         required: false
-        default: "isnet-general-use"
+        default: "birefnet-massive"
         type: choice
         options:
           - u2net
