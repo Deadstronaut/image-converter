@@ -2,13 +2,17 @@
 
 import os
 import math
+# --- Transformers stub (no HuggingFace needed) ---
+import torch.nn as nn
 try:
-    from transformers import PreTrainedModel
+    from transformers import PreTrainedModel, PretrainedConfig
 except ImportError:
-    import torch.nn as nn
     class PreTrainedModel(nn.Module):
         def __init__(self, *args, **kwargs):
             super().__init__()
+    class PretrainedConfig:
+        pass
+
 
 
 
