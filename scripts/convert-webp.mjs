@@ -24,7 +24,7 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
-const modelArg = getArg("model", "dynamic"); // hr | dynamic
+const modelArg = getArg("model", "dynamic"); // hr | dynamic | general
 const updateDB = process.argv.includes("--update-db");
 
 // --- Supabase ---
