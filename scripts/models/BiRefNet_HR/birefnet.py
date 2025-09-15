@@ -1979,7 +1979,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from kornia.filters import laplacian
-from transformers import PreTrainedModel
+try:
+    from transformers import PreTrainedModel
+except ImportError:
+    import torch.nn as nn
+    class PreTrainedModel(nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+
 from einops import rearrange
 
 # from config import Config
