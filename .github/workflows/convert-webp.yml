@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: true   # LFS dosyalarını çek
 
       - name: Pull LFS files
         run: git lfs pull
@@ -53,12 +53,11 @@ jobs:
           pip install "numpy<2"
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install \
-            transformers \
             pillow \
+            safetensors \
             einops \
             kornia \
             timm \
-            safetensors \
             tqdm \
             scikit-image==0.22.0 \
             opencv-python-headless==4.10.0.84
