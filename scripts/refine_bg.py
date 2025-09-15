@@ -40,6 +40,16 @@ def load_model(model_name: str):
         raise ValueError(f"Bilinmeyen model: {model_name}")
 
 
+def pad_to_multiple(tensor, multiple=32):
+    _, _, h, w = tensor.shape
+    new_h = ((h + multiple - 1) // multiple) * multiple
+    new_w = ((w + multiple - 1) // multiple) * multiple
+    pad_h = new_h - h
+    pad_w = new_w - w
+    padded = torch.nn.functional.pad(tensor, (0, pad_w, 0, pad_h), mode="reflect")
+    return padded, (h, w)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input image path (JPG/PNG)")
@@ -57,11 +67,18 @@ def main():
     arr = np.array(image).astype(np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)  # [1,3,H,W]
 
+    # Pad to multiples of 32
+    tensor, orig_size = pad_to_multiple(tensor, multiple=32)
+
     with torch.no_grad():
         pred = model(tensor)
         if isinstance(pred, (list, tuple)):
             pred = pred[0]
         mask = torch.sigmoid(pred).squeeze().cpu().numpy()
+
+    # Crop back to original size
+    h, w = orig_size
+    mask = mask[:h, :w]
 
     # Binarize
     mask = (mask > 0.5).astype(np.uint8) * 255
