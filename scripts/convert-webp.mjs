@@ -1,4 +1,3 @@
-// scripts/convert-webp.mjs
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { execSync } from "child_process";
@@ -11,13 +10,6 @@ const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 const BUCKET = process.env.BUCKET;
 const PRODUCTS_TABLE = process.env.PRODUCTS_TABLE || "products";
 const IMAGE_COLUMN = process.env.IMAGE_COLUMN || "image_url";
-
-const FG_THRESHOLD = process.env.FG_THRESHOLD || "220";
-const BG_THRESHOLD = process.env.BG_THRESHOLD || "30";
-const ERODE_SIZE   = process.env.ERODE_SIZE   || "1";
-const FILL_HOLES   = process.env.FILL_HOLES   || "true";
-const BLUR_RADIUS  = process.env.BLUR_RADIUS  || "1.0";
-const MODEL        = process.env.MODEL        || "birefnet-massive";
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !BUCKET) {
   console.error("Eksik env: SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET");
@@ -32,7 +24,6 @@ const getArg = (n, d = null) => {
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const updateDB = process.argv.includes("--update-db");
-const modelArg = getArg("model", MODEL);
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -74,12 +65,8 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  let cmd = `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`;
-  if (modelArg === "manual") {
-    cmd += ` --fg ${FG_THRESHOLD} --bg ${BG_THRESHOLD} --erode ${ERODE_SIZE} --fill-holes ${FILL_HOLES} --blur ${BLUR_RADIUS}`;
-  }
+  execSync(`python scripts/refine_bg.py ${inPath} ${outPath}`);
 
-  execSync(cmd);
   return fs.readFileSync(outPath);
 }
 
@@ -94,7 +81,7 @@ async function refineBg(buf, tmpName) {
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL:", modelArg);
+    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL: birefnet-massive");
 
     const buf = await downloadFile(srcPath);
     if (!buf) continue;
