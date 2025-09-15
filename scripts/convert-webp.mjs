@@ -23,10 +23,8 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
+const modelArg = getArg("model", "dynamic"); // hr | dynamic
 const updateDB = process.argv.includes("--update-db");
-
-// --- MODELS PATH ---
-const modelArg = getArg("model", "dynamic"); // default dynamic
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -67,9 +65,6 @@ async function refineBg(buf, tmpName) {
   const inPath = path.join("/tmp", tmpName + ".jpg");
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
-
-  const modelPath = MODEL_PATHS[modelArg];
-  if (!modelPath) throw new Error(`Unknown model: ${modelArg}`);
 
   try {
     execSync(
@@ -119,5 +114,3 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
-
-
