@@ -38,11 +38,6 @@ on:
         description: "Hard mask (kenarları jilet gibi kes)"
         required: false
         default: "false"
-      model:   # 🔹 yeni eklenen dropdown
-        description: "Kullanılacak model"
-        required: false
-        default: "isnet-general-use"
-        type: choice
       model:
         description: "Kullanılacak model"
         required: false
