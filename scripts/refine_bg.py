@@ -1,38 +1,27 @@
-import sys, io, argparse
-import numpy as np
+# scripts/refine_bg.py
+import argparse
 from rembg import remove
 from PIL import Image
+import sys
 
-# --- NumPy Guard ---
-if int(np.__version__.split(".")[0]) >= 2:
-    raise RuntimeError("Use numpy<2 (NumPy 1.x)")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_path")
+    parser.add_argument("output_path")
+    parser.add_argument("--model", type=str, default="sam-hq")
+    args = parser.parse_args()
 
-# --- Args ---
-parser = argparse.ArgumentParser()
-parser.add_argument("input", help="Input image path")
-parser.add_argument("output", help="Output image path")
-parser.add_argument("--model", type=str, default="birefnet-massive",
-    choices=[
-        "u2net","u2netp","u2net_human_seg","u2net_cloth_seg","silueta",
-        "isnet-general-use","isnet-anime",
-        "sam","sam-hq",
-        "birefnet-general","birefnet-general-lite","birefnet-portrait",
-        "birefnet-dis","birefnet-hrsod","birefnet-cod","birefnet-massive"
-    ],
-    help="Kullanılacak model")
-args = parser.parse_args()
+    with open(args.input_path, "rb") as i:
+        input_img = i.read()
 
-in_path, out_path = args.input, args.output
+    # MODEL'i gerçekten args.model’den al
+    output = remove(
+        input_img,
+        model_name=args.model
+    )
 
-opts = {"model": args.model}
+    with open(args.output_path, "wb") as o:
+        o.write(output)
 
-# --- Load image ---
-with open(in_path, "rb") as f:
-    inp = f.read()
-img = Image.open(io.BytesIO(inp)).convert("RGBA")
-
-# --- Remove BG ---
-result = remove(img, **opts)
-
-result.save(out_path, format="PNG")
-print(f"✅ Refined: {in_path} → {out_path} (model={args.model})")
+if __name__ == "__main__":
+    sys.exit(main())
