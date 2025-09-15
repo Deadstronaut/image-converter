@@ -23,8 +23,14 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
-const modelArg = getArg("model", "birefnet-massive");
+const modelArg = getArg("model", "birefnet-dynamic"); // default dynamic
 const updateDB = process.argv.includes("--update-db");
+
+// --- MODELS PATH ---
+const MODEL_PATHS = {
+  "birefnet-hr": "scripts/models/BiRefNet_HR/model.safetensors",
+  "birefnet-dynamic": "scripts/models/BiRefNet_dynamic/model.safetensors",
+};
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -66,7 +72,18 @@ async function refineBg(buf, tmpName) {
   const outPath = path.join("/tmp", tmpName + "-refined.png");
   fs.writeFileSync(inPath, buf);
 
-  execSync(`python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`);
+  const modelPath = MODEL_PATHS[modelArg];
+  if (!modelPath) throw new Error(`Unknown model: ${modelArg}`);
+
+  try {
+    execSync(
+      `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelPath}`,
+      { stdio: "inherit" }
+    );
+  } catch (err) {
+    console.error("Refine hata:", err.message);
+    throw err;
+  }
 
   return fs.readFileSync(outPath);
 }
