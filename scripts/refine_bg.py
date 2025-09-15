@@ -21,6 +21,7 @@ except ImportError:
 # --- Model importları ---
 from models.BiRefNet_dynamic.birefnet import BiRefNet as DynamicNet, BiRefNetConfig as DynamicConfig
 from models.BiRefNet_HR.birefnet import BiRefNet as HRNet, BiRefNetConfig as HRConfig
+from models.BiRefNet_general.birefnet import BiRefNet as GeneralNet, BiRefNetConfig as GeneralConfig
 
 
 def load_model(model_name: str):
@@ -34,6 +35,12 @@ def load_model(model_name: str):
         config = HRConfig()
         model = HRNet(config)
         weights = load_file("scripts/models/BiRefNet_HR/model.safetensors")
+        model.load_state_dict(weights)
+        return model
+    elif model_name == "general":
+        config = GeneralConfig()
+        model = GeneralNet(config)
+        weights = load_file("scripts/models/BiRefNet_general/model.safetensors")
         model.load_state_dict(weights)
         return model
     else:
@@ -54,7 +61,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input image path (JPG/PNG)")
     parser.add_argument("output", help="Output image path (PNG)")
-    parser.add_argument("--model", choices=["hr", "dynamic"], default="dynamic",
+    parser.add_argument("--model", choices=["hr", "dynamic", "general"], default="dynamic",
                         help="Kullanılacak BiRefNet modeli")
     args = parser.parse_args()
 
