@@ -36,32 +36,31 @@ on:
           - birefnet-hrsod
           - birefnet-cod
           - birefnet-massive
+          - manual   # 🔹 yeni eklendi
       fg_threshold:
-        description: "Foreground threshold"
+        description: "Foreground threshold (sadece manual mod)"
         required: false
         default: "220"
       bg_threshold:
-        description: "Background threshold"
+        description: "Background threshold (sadece manual mod)"
         required: false
         default: "30"
       erode_size:
-        description: "Erode size"
+        description: "Erode size (sadece manual mod)"
         required: false
         default: "1"
       fill_holes:
-        description: "Mask delikleri doldurulsun mu?"
+        description: "Mask delikleri doldurulsun mu? (sadece manual mod)"
         required: false
         default: "true"
       blur_radius:
-        description: "Kenar yumuşatma (Gaussian blur radius)"
+        description: "Kenar yumuşatma (Gaussian blur radius, sadece manual mod)"
         required: false
         default: "0.0"
       hard_mask:
         description: "Hard mask (kenarları jilet gibi kes)"
         required: false
         default: "false"
-
-
 
 jobs:
   run:
