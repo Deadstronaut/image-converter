@@ -2,7 +2,6 @@
 
 import os
 import math
-from transformers import PretrainedConfig
 import torch
 
 try:
