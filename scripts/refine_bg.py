@@ -18,7 +18,7 @@ parser.add_argument("--bg", type=int, default=30, help="Background threshold")
 parser.add_argument("--erode", type=int, default=1, help="Erode size")
 parser.add_argument("--fill-holes", type=lambda v: v.lower() in ("1","true","yes"), default=True)
 parser.add_argument("--blur", type=float, default=1.0, help="Gaussian blur radius")
-parser.add_argument("--model", type=str, default="isnet-general-use",
+parser.add_argument("--model", type=str, default="birefnet-massive",
     choices=["u2net","u2netp","u2net_human_seg","u2net_cloth_seg","silueta",
          "isnet-general-use","isnet-anime",
          "sam","sam-hq",
