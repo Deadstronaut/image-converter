@@ -1,26 +1,27 @@
 import sys
-import io
 import argparse
-from rembg import remove
-from PIL import Image
+from rembg import remove, new_session
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_path", help="Girdi görseli")
-    parser.add_argument("output_path", help="Çıktı görseli")
-    parser.add_argument("--model", default="u2net", help="Model adı (örn: u2net, u2netp, sam-hq, isnet-general, ...)")
+    parser.add_argument("input_path")
+    parser.add_argument("output_path")
+    parser.add_argument("--model", default="u2net")
     args = parser.parse_args()
 
+    # input oku
     with open(args.input_path, "rb") as f:
         input_img = f.read()
 
-    # Sadece model_name parametresi
-    result = remove(input_img, model_name=args.model)
+    # sadece senin seçtiğin modelle session aç
+    session = new_session(model_name=args.model)
 
+    # remove'u session ile çağır
+    result = remove(input_img, session=session)
+
+    # çıktıyı yaz
     with open(args.output_path, "wb") as f:
         f.write(result)
-
-    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
