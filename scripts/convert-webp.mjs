@@ -27,10 +27,7 @@ const modelArg = getArg("model", "birefnet-dynamic"); // default dynamic
 const updateDB = process.argv.includes("--update-db");
 
 // --- MODELS PATH ---
-const MODEL_PATHS = {
-  "birefnet-hr": "scripts/models/BiRefNet_HR/model.safetensors",
-  "birefnet-dynamic": "scripts/models/BiRefNet_dynamic/model.safetensors",
-};
+const modelArg = getArg("model", "dynamic"); // default dynamic
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -77,7 +74,7 @@ async function refineBg(buf, tmpName) {
 
   try {
     execSync(
-      `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelPath}`,
+      `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`,
       { stdio: "inherit" }
     );
   } catch (err) {
@@ -123,3 +120,4 @@ async function refineBg(buf, tmpName) {
     console.log(`✅ ${srcPath} → ${dstPath}`);
   }
 })();
+
