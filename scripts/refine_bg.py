@@ -7,6 +7,16 @@ from safetensors.torch import load_file
 import sys, os
 sys.path.append(os.path.dirname(__file__))
 
+# --- Transformers stub (HuggingFace bağımlılığı olmadan çalışması için) ---
+import torch.nn as nn
+try:
+    from transformers import PreTrainedModel, PretrainedConfig
+except ImportError:
+    class PreTrainedModel(nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+    class PretrainedConfig:
+        pass
 
 # --- Model importları ---
 from models.BiRefNet_dynamic.birefnet import BiRefNet as DynamicNet, BiRefNetConfig as DynamicConfig
