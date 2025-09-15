@@ -1,27 +1,45 @@
-import sys
+# scripts/refine_bg.py
 import argparse
-from rembg import remove, new_session
+from PIL import Image
+import torch
+from transformers import AutoModelForImageSegmentation, AutoProcessor
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_path")
-    parser.add_argument("output_path")
-    parser.add_argument("--model", default="u2net")
+    parser.add_argument("input", help="Input image path (JPG/PNG)")
+    parser.add_argument("output", help="Output image path (PNG)")
+    parser.add_argument("--model", choices=["hr","dynamic"], default="dynamic",
+                        help="Kullanılacak BiRefNet modeli: hr veya dynamic")
     args = parser.parse_args()
 
-    # input oku
-    with open(args.input_path, "rb") as f:
-        input_img = f.read()
+    # Model path seçimi
+    model_path = (
+        "scripts/models/BiRefNet_HR"
+        if args.model == "hr"
+        else "scripts/models/BiRefNet_dynamic"
+    )
 
-    # sadece senin seçtiğin modelle session aç
-    session = new_session(model_name=args.model)
+    print(f"🔍 Loading model from {model_path} ...")
+    model = AutoModelForImageSegmentation.from_pretrained(model_path, trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
 
-    # remove'u session ile çağır
-    result = remove(input_img, session=session)
+    # Image oku
+    image = Image.open(args.input).convert("RGB")
+    inputs = processor(images=image, return_tensors="pt")
 
-    # çıktıyı yaz
-    with open(args.output_path, "wb") as f:
-        f.write(result)
+    # Prediction
+    with torch.no_grad():
+        preds = model(**inputs).logits
+
+    mask = preds[0].sigmoid().squeeze()
+    mask = (mask > 0.5).float() * 255  # binarize
+    mask_img = Image.fromarray(mask.byte().cpu().numpy()).resize(image.size)
+
+    # Apply alpha mask
+    image.putalpha(mask_img)
+    image.save(args.output)
+
+    print(f"✅ Saved: {args.input} → {args.output} (model={args.model})")
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
