@@ -1,53 +1,93 @@
-# scripts/refine_bg.py
+"""Refine product backgrounds using locally downloaded BiRefNet weights."""
+
 import argparse
-from PIL import Image
-import torch
+import os
+import sys
+from importlib import import_module
+from pathlib import Path
+
 import numpy as np
+import torch
+from PIL import Image
 from safetensors.torch import load_file
-import sys, os
+
+# Allow local model packages to be resolved when the script is invoked via subprocess
 sys.path.append(os.path.dirname(__file__))
 
-# --- Transformers stub (HuggingFace bağımlılığı olmadan çalışması için) ---
-import torch.nn as nn
+# --- Optional transformers dependency ----------------------------------------------------
 try:
-    from transformers import PreTrainedModel, PretrainedConfig
-except ImportError:
-    class PreTrainedModel(nn.Module):
+    from transformers import PreTrainedModel, PretrainedConfig  # type: ignore
+except ImportError:  # pragma: no cover - lightweight fallback for Actions runner
+    class PreTrainedModel(torch.nn.Module):  # type: ignore
         def __init__(self, *args, **kwargs):
             super().__init__()
-    class PretrainedConfig:
+
+    class PretrainedConfig:  # type: ignore
         pass
 
-# --- Model importları ---
-from models.BiRefNet_dynamic.birefnet import BiRefNet as DynamicNet, BiRefNetConfig as DynamicConfig
-from models.BiRefNet_HR.birefnet import BiRefNet as HRNet, BiRefNetConfig as HRConfig
-from models.BiRefNet_general.birefnet import BiRefNet as GeneralNet, BiRefNetConfig as GeneralConfig
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+MODEL_SPECS = {
+    "dynamic": {
+        "module": "models.BiRefNet_dynamic.birefnet",
+        "model_attr": "BiRefNet",
+        "config_attr": "BiRefNetConfig",
+        "weights": SCRIPT_DIR / "models" / "BiRefNet_dynamic" / "model.safetensors",
+        "expected_dir": SCRIPT_DIR / "models" / "BiRefNet_dynamic",
+    },
+    "hr": {
+        "module": "models.BiRefNet_HR.birefnet",
+        "model_attr": "BiRefNet",
+        "config_attr": "BiRefNetConfig",
+        "weights": SCRIPT_DIR / "models" / "BiRefNet_HR" / "model.safetensors",
+        "expected_dir": SCRIPT_DIR / "models" / "BiRefNet_HR",
+    },
+    "general": {
+        "module": "models.BiRefNet_general.birefnet",
+        "model_attr": "BiRefNet",
+        "config_attr": "BiRefNetConfig",
+        "weights": SCRIPT_DIR / "models" / "BiRefNet_general" / "model.safetensors",
+        "expected_dir": SCRIPT_DIR / "models" / "BiRefNet_general",
+    },
+}
+
+_MODEL_CACHE = {}
 
 
 def load_model(model_name: str):
-    if model_name == "dynamic":
-        config = DynamicConfig()
-        model = DynamicNet(config)
-        weights = load_file("scripts/models/BiRefNet_dynamic/model.safetensors")
-        model.load_state_dict(weights)
-        return model
-    elif model_name == "hr":
-        config = HRConfig()
-        model = HRNet(config)
-        weights = load_file("scripts/models/BiRefNet_HR/model.safetensors")
-        model.load_state_dict(weights)
-        return model
-    elif model_name == "general":
-        config = GeneralConfig()
-        model = GeneralNet(config)
-        weights = load_file("scripts/models/BiRefNet_general/model.safetensors")
-        model.load_state_dict(weights)
-        return model
-    else:
-        raise ValueError(f"Bilinmeyen model: {model_name}")
+    if model_name not in MODEL_SPECS:
+        raise ValueError(f"Unknown model: {model_name}")
+
+    if model_name in _MODEL_CACHE:
+        return _MODEL_CACHE[model_name]
+
+    spec = MODEL_SPECS[model_name]
+    try:
+        module = import_module(spec["module"])
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Model '" + model_name + "' is not available locally. "
+            + "Expected package under '" + str(spec["expected_dir"]) + "'.\n"
+            + "Download the model repository via git lfs from Hugging Face and try again."
+        ) from exc
+
+    model_cls = getattr(module, spec["model_attr"])
+    config_cls = getattr(module, spec["config_attr"])
+    weights_path = spec["weights"]
+    if not weights_path.exists():
+        raise FileNotFoundError(
+            "Weights file not found for model '" + model_name + "'. Expected: " + str(weights_path)
+        )
+
+    weights = load_file(str(weights_path))
+    model = model_cls(config_cls())
+    model.load_state_dict(weights)
+    model.eval()
+    _MODEL_CACHE[model_name] = model
+    return model
 
 
-def pad_to_multiple(tensor, multiple=32):
+def pad_to_multiple(tensor: torch.Tensor, multiple: int = 32):
     _, _, h, w = tensor.shape
     new_h = ((h + multiple - 1) // multiple) * multiple
     new_w = ((w + multiple - 1) // multiple) * multiple
@@ -57,24 +97,24 @@ def pad_to_multiple(tensor, multiple=32):
     return padded, (h, w)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input image path (JPG/PNG)")
     parser.add_argument("output", help="Output image path (PNG)")
-    parser.add_argument("--model", choices=["hr", "dynamic", "general"], default="dynamic",
-                        help="Kullanılacak BiRefNet modeli")
+    parser.add_argument(
+        "--model",
+        choices=["hr", "dynamic", "general"],
+        default="dynamic",
+        help="BiRefNet model to use",
+    )
     args = parser.parse_args()
 
-    print(f"🔍 Loading BiRefNet model: {args.model}")
+    print(f"Loading BiRefNet model: {args.model}")
     model = load_model(args.model)
-    model.eval()
 
-    # Image oku
     image = Image.open(args.input).convert("RGB")
     arr = np.array(image).astype(np.float32) / 255.0
-    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)  # [1,3,H,W]
-
-    # Pad to multiples of 32
+    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
     tensor, orig_size = pad_to_multiple(tensor, multiple=32)
 
     with torch.no_grad():
@@ -83,19 +123,15 @@ def main():
             pred = pred[0]
         mask = torch.sigmoid(pred).squeeze().cpu().numpy()
 
-    # Crop back to original size
     h, w = orig_size
     mask = mask[:h, :w]
-
-    # Binarize
     mask = (mask > 0.5).astype(np.uint8) * 255
     mask_img = Image.fromarray(mask).resize(image.size)
 
-    # Apply alpha mask
     image.putalpha(mask_img)
     image.save(args.output)
 
-    print(f"✅ Saved: {args.input} → {args.output} (model={args.model})")
+    print(f"Saved refined image: {args.output} (model={args.model})")
 
 
 if __name__ == "__main__":

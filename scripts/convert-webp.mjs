@@ -3,7 +3,27 @@ import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { execSync } from "child_process";
 import fs from "fs";
+import os from "os";
 import path from "path";
+
+const MODEL_FOLDERS = {
+  dynamic: "BiRefNet_dynamic",
+  hr: "BiRefNet_HR",
+  general: "BiRefNet_general",
+};
+
+const availableModels = Object.entries(MODEL_FOLDERS)
+  .filter(([name, folder]) => {
+    const dir = path.join("scripts", "models", folder);
+    const weights = path.join(dir, "model.safetensors");
+    return fs.existsSync(dir) && fs.existsSync(weights);
+  })
+  .map(([name]) => name);
+
+if (!availableModels.length) {
+  console.error("Hic bir BiRefNet modeli bulunamadi. scripts/models altina Hugging Face reposunu git lfs ile alin.");
+  process.exit(1);
+}
 
 // --- ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -24,8 +44,18 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
-const modelArg = getArg("model", "dynamic"); // hr | dynamic | general
+const modelArg = getArg("model", "dynamic");
 const updateDB = process.argv.includes("--update-db");
+
+if (!availableModels.includes(modelArg)) {
+  console.error(
+    `Model '${modelArg}' bulunamadi. Kullanim icin hazir modeller: ${availableModels.join(", ")}`
+  );
+  process.exit(1);
+}
+
+const refineScript = path.resolve("scripts", "refine_bg.py");
+const tmpDir = os.tmpdir();
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -36,12 +66,12 @@ const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
   if (error) throw error;
-  return (data || []).filter(f => /\.(jpe?g|png)$/i.test(f.name));
+  return (data || []).filter((f) => /\.(jpe?g|png)$/i.test(f.name));
 };
 
 // --- DOWNLOAD ---
-const downloadFile = async (path) => {
-  const { data, error } = await storage.download(path);
+const downloadFile = async (itemPath) => {
+  const { data, error } = await storage.download(itemPath);
   if (error) throw error;
   return Buffer.from(await data.arrayBuffer());
 };
@@ -63,28 +93,31 @@ const removeFile = async (srcPath) => {
 
 // --- CALL REFINE ---
 async function refineBg(buf, tmpName) {
-  const inPath = path.join("/tmp", tmpName + ".jpg");
-  const outPath = path.join("/tmp", tmpName + "-refined.png");
-  fs.writeFileSync(inPath, buf);
+  const inputPath = path.join(tmpDir, `${tmpName}.jpg`);
+  const outputPath = path.join(tmpDir, `${tmpName}-refined.png`);
+  fs.writeFileSync(inputPath, buf);
 
   try {
     execSync(
-      `python scripts/refine_bg.py ${inPath} ${outPath} --model ${modelArg}`,
+      `python "${refineScript}" "${inputPath}" "${outputPath}" --model ${modelArg}`,
       { stdio: "inherit" }
     );
   } catch (err) {
-    console.error("Refine hata:", err.message);
+    console.error("Arka plan iyilestirme hatasi:", err.message);
     throw err;
   }
 
-  return fs.readFileSync(outPath);
+  const refined = fs.readFileSync(outputPath);
+  fs.unlinkSync(inputPath);
+  fs.unlinkSync(outputPath);
+  return refined;
 }
 
 // --- MAIN ---
 (async () => {
   const files = await listOnce(prefix);
   if (!files.length) {
-    console.log("Hiç dosya yok");
+    console.log("Islenecek dosya yok.");
     return;
   }
 
@@ -112,6 +145,6 @@ async function refineBg(buf, tmpName) {
       if (error) console.error("DB update err:", error.message);
     }
 
-    console.log(`✅ ${srcPath} → ${dstPath}`);
+    console.log(`OK ${srcPath} -> ${dstPath}`);
   }
 })();
