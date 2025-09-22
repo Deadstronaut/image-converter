@@ -146,12 +146,15 @@ transformers
 
 ```python
 from PIL import Image
+import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 from transformers import AutoModelForImageSegmentation
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = AutoModelForImageSegmentation.from_pretrained('briaai/RMBG-2.0', trust_remote_code=True).eval().to(device)
+model = AutoModelForImageSegmentation.from_pretrained('briaai/RMBG-2.0', trust_remote_code=True)
+torch.set_float32_matmul_precision(['high', 'highest'][0])
+model.to('cuda')
+model.eval()
 
 # Data settings
 image_size = (1024, 1024)
@@ -162,7 +165,7 @@ transform_image = transforms.Compose([
 ])
 
 image = Image.open(input_image_path)
-input_images = transform_image(image).unsqueeze(0).to(device)
+input_images = transform_image(image).unsqueeze(0).to('cuda')
 
 # Prediction
 with torch.no_grad():
