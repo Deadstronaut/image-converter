@@ -100,10 +100,10 @@ async function refineBg(buf, tmpName) {
   fs.writeFileSync(inputPath, buf);
 
   try {
-    execSync(
-      `python "${refineScript}" "${inputPath}" "${outputPath}" --model ${modelArg}`,
-      { stdio: "inherit" }
-    );
+  execSync(
+    `python "${refineScript}" "${inputPath}" "${outputPath}"`,
+    { stdio: "inherit" }
+  );
   } catch (err) {
     console.error("Arka plan iyilestirme hatasi:", err.message);
     throw err;
