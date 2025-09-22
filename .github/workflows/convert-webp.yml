@@ -21,7 +21,7 @@ on:
         required: false
         default: "dynamic"
         type: choice
-        options: [hr, dynamic, general]
+        options: [hr, dynamic, general, rmbg20]
 
 jobs:
   run:
@@ -37,15 +37,31 @@ jobs:
           set -euo pipefail
           git lfs install
           case "$SELECTED_MODEL" in
-            dynamic) repo="BiRefNet_dynamic" ;;
-            hr) repo="BiRefNet_HR" ;;
-            general) repo="BiRefNet_general" ;;
-            *) echo "Unsupported model: $SELECTED_MODEL" >&2; exit 1 ;;
+            dynamic)
+              folder="BiRefNet_dynamic"
+              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_dynamic"
+              ;;
+            hr)
+              folder="BiRefNet_HR"
+              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_HR"
+              ;;
+            general)
+              folder="BiRefNet_general"
+              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_general"
+              ;;
+            rmbg20)
+              folder="RMBG-2.0"
+              repo_url="https://huggingface.co/skytnt/rmbg-2.0"
+              ;;
+            *)
+              echo "Unsupported model: $SELECTED_MODEL" >&2
+              exit 1
+              ;;
           esac
-          dest="scripts/models/${repo}"
+          dest="scripts/models/${folder}"
           mkdir -p scripts/models
           rm -rf "$dest"
-          git clone --depth 1 "https://huggingface.co/ZhengPeng7/${repo}" "$dest"
+          git clone --depth 1 "$repo_url" "$dest"
           rm -rf "$dest/.git"
 
       - name: Setup Node
@@ -94,3 +110,5 @@ jobs:
             --quality "${{ inputs.quality }}" \
             --model "${{ inputs.model }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
+
+
