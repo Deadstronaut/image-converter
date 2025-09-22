@@ -4,20 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
+        description: "Bucket alt yolu (or: elektronik/akilli-saat-ve-bileklik/samsung)"
         required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
         default: "60"
       update_db:
-        description: "products.image_url güncellensin mi?"
+        description: "products.image_url guncellensin mi?"
         required: false
         default: "true"
         type: choice
         options: [true, false]
       model:
-        description: "Kullanılacak BiRefNet modeli"
+        description: "Kullanilacak model"
         required: false
         default: "dynamic"
         type: choice
@@ -29,10 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare BiRefNet weights
+      - name: Hugging Face Login
+        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+
+      - name: Prepare Model Weights
         shell: bash
         env:
           SELECTED_MODEL: ${{ inputs.model }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           set -euo pipefail
           git lfs install
@@ -47,7 +51,6 @@ jobs:
               ;;
             rmbg20)
               folder="RMBG-2.0"
-              # resmi gated repo: briaai/RMBG-2.0 (HF_TOKEN lazım)
               repo_url="https://huggingface.co/briaai/RMBG-2.0"
               ;;
             *)
@@ -58,7 +61,7 @@ jobs:
           dest="scripts/models/${folder}"
           mkdir -p scripts/models
           rm -rf "$dest"
-          git clone --depth 1 "https://user:$HF_TOKEN@$repo_url" "$dest"
+          git clone --depth 1 "https://user:${HF_TOKEN}@${repo_url#https://}" "$dest"
           rm -rf "$dest/.git"
 
       - name: Setup Node
