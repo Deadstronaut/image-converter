@@ -1,3 +1,5 @@
+# scripts/models/RMBG-2.0/BiRefNet_config.py
+
 import torch
 
 try:

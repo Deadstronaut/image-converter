@@ -2,7 +2,6 @@ import argparse
 from PIL import Image
 import torch
 import numpy as np
-from safetensors.torch import load_file
 import os, sys, importlib.util
 
 base_dir = os.path.dirname(__file__)
@@ -34,7 +33,9 @@ def load_model():
 
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
-    weights = load_file(os.path.join(model_dir, "model.safetensors"))
+
+    # 🔑 safetensors yerine torch.load kullan
+    weights = torch.load(os.path.join(model_dir, "pytorch_model.bin"), map_location="cpu")
     model.load_state_dict(weights)
     return model
 
@@ -52,7 +53,7 @@ def main():
     parser.add_argument("output", help="Output image path (PNG)")
     args = parser.parse_args()
 
-    print(f"🔍 Loading BiRefNet model: RMBG-2.0")
+    print("🔍 Loading BiRefNet model: RMBG-2.0")
     model = load_model()
     model.eval()
 
