@@ -1,6 +1,12 @@
 # scripts/models/BiRefNet_HR/BiRefNet_config.py
 
-from transformers import PretrainedConfig
+import torch
+
+try:
+    from transformers import PretrainedConfig
+except ImportError:
+    class PretrainedConfig:
+        pass
 
 class BiRefNetConfig(PretrainedConfig):
     model_type = "SegformerForSemanticSegmentation"
@@ -8,4 +14,3 @@ class BiRefNetConfig(PretrainedConfig):
     def __init__(self, bb_pretrained=False, **kwargs):
         self.bb_pretrained = bb_pretrained
         super().__init__(**kwargs)
-

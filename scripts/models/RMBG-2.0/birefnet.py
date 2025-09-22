@@ -2,13 +2,28 @@
 
 import os
 import math
-from transformers import PretrainedConfig
+import torch
+
+try:
+    from transformers import PretrainedConfig, PreTrainedModel
+except ImportError:
+    import torch.nn as nn
+    class PretrainedConfig:
+        pass
+    class PreTrainedModel(nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+
 
 class Config(PretrainedConfig):
     def __init__(self) -> None:
+        # Compatible with the latest version of transformers.
+        # Error source: https://github.com/huggingface/transformers/commit/9568b506ed511c76ab4d0c6ed591c7fce8e048a5
+        # Previous solution in the users' end: https://github.com/ZhengPeng7/BiRefNet/issues/189#issuecomment-2716688688
         super().__init__()
+
         # PATH settings
-        self.sys_home_dir = os.path.expanduser('~')    # Make up your file system as: SYS_HOME_DIR/codes/dis/BiRefNet, SYS_HOME_DIR/datasets/dis/xx, SYS_HOME_DIR/weights/xx
+        self.sys_home_dir = os.path.expanduser('~')     # Make up your file system as: SYS_HOME_DIR/codes/dis/BiRefNet, SYS_HOME_DIR/datasets/dis/xx, SYS_HOME_DIR/weights/xx
 
         # TASK settings
         self.task = ['DIS5K', 'COD', 'HRSOD', 'DIS5K+HRSOD+HRS10K', 'P3M-10k'][0]
@@ -616,6 +631,7 @@ from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 
 # config = Config()
 
+
 class Mlp(nn.Module):
     """ Multilayer perceptron."""
 
@@ -740,7 +756,8 @@ class WindowAttention(nn.Module):
             attn = (q @ k.transpose(-2, -1))
 
             relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
-                self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1)  # Wh*Ww,Wh*Ww,nH
+                self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1
+            )   # Wh*Ww, Wh*Ww, nH
             relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
             attn = attn + relative_position_bias.unsqueeze(0)
 
@@ -975,8 +992,9 @@ class BasicLayer(nn.Module):
         """
 
         # calculate attention mask for SW-MSA
-        Hp = int(np.ceil(H / self.window_size)) * self.window_size
-        Wp = int(np.ceil(W / self.window_size)) * self.window_size
+        # Turn int to torch.tensor for the compatiability with torch.compile in PyTorch 2.5.
+        Hp = torch.ceil(torch.tensor(H) / self.window_size).to(torch.int64) * self.window_size
+        Wp = torch.ceil(torch.tensor(W) / self.window_size).to(torch.int64) * self.window_size
         img_mask = torch.zeros((1, Hp, Wp, 1), device=x.device)  # 1 Hp Wp 1
         h_slices = (slice(0, -self.window_size),
                     slice(-self.window_size, -self.shift_size),
@@ -993,7 +1011,7 @@ class BasicLayer(nn.Module):
         mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
         mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
         attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
-        attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+        attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0)).to(x.dtype)
 
         for blk in self.blocks:
             blk.H, blk.W = H, W
@@ -1961,7 +1979,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from kornia.filters import laplacian
-from transformers import PreTrainedModel
+try:
+    from transformers import PreTrainedModel
+except ImportError:
+    import torch.nn as nn
+    class PreTrainedModel(nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+
+from einops import rearrange
 
 # from config import Config
 # from dataset import class_labels_TR_sorted
@@ -1974,6 +2000,18 @@ from transformers import PreTrainedModel
 # from models.stem_layer import StemLayer
 from .BiRefNet_config import BiRefNetConfig
 
+
+def image2patches(image, grid_h=2, grid_w=2, patch_ref=None, transformation='b c (hg h) (wg w) -> (b hg wg) c h w'):
+    if patch_ref is not None:
+        grid_h, grid_w = image.shape[-2] // patch_ref.shape[-2], image.shape[-1] // patch_ref.shape[-1]
+    patches = rearrange(image, transformation, hg=grid_h, wg=grid_w)
+    return patches
+
+def patches2image(patches, grid_h=2, grid_w=2, patch_ref=None, transformation='(b hg wg) c h w -> b c (hg h) (wg w)'):
+    if patch_ref is not None:
+        grid_h, grid_w = patch_ref.shape[-2] // patches[0].shape[-2], patch_ref.shape[-1] // patches[0].shape[-1]
+    image = rearrange(patches, transformation, hg=grid_h, wg=grid_w)
+    return image
 
 class BiRefNet(
     PreTrainedModel
@@ -2125,18 +2163,6 @@ class Decoder(nn.Module):
                 self.gdt_convs_attn_3 = nn.Sequential(nn.Conv2d(_N, 1, 1, 1, 0))
                 self.gdt_convs_attn_2 = nn.Sequential(nn.Conv2d(_N, 1, 1, 1, 0))
 
-    def get_patches_batch(self, x, p):
-        _size_h, _size_w = p.shape[2:]
-        patches_batch = []
-        for idx in range(x.shape[0]):
-            columns_x = torch.split(x[idx], split_size_or_sections=_size_w, dim=-1)
-            patches_x = []
-            for column_x in columns_x:
-                patches_x += [p.unsqueeze(0) for p in torch.split(column_x, split_size_or_sections=_size_h, dim=-2)]
-            patch_sample = torch.cat(patches_x, dim=1)
-            patches_batch.append(patch_sample)
-        return torch.cat(patches_batch, dim=0)
-
     def forward(self, features):
         if self.training and self.config.out_ref:
             outs_gdt_pred = []
@@ -2147,10 +2173,10 @@ class Decoder(nn.Module):
         outs = []
 
         if self.config.dec_ipt:
-            patches_batch = self.get_patches_batch(x, x4) if self.split else x
+            patches_batch = image2patches(x, patch_ref=x4, transformation='b c (hg h) (wg w) -> b (c hg wg) h w') if self.split else x
             x4 = torch.cat((x4, self.ipt_blk5(F.interpolate(patches_batch, size=x4.shape[2:], mode='bilinear', align_corners=True))), 1)
         p4 = self.decoder_block4(x4)
-        m4 = self.conv_ms_spvn_4(p4) if self.config.ms_supervision else None
+        m4 = self.conv_ms_spvn_4(p4) if self.config.ms_supervision and self.training else None
         if self.config.out_ref:
             p4_gdt = self.gdt_convs_4(p4)
             if self.training:
@@ -2168,10 +2194,10 @@ class Decoder(nn.Module):
         _p3 = _p4 + self.lateral_block4(x3)
 
         if self.config.dec_ipt:
-            patches_batch = self.get_patches_batch(x, _p3) if self.split else x
+            patches_batch = image2patches(x, patch_ref=_p3, transformation='b c (hg h) (wg w) -> b (c hg wg) h w') if self.split else x
             _p3 = torch.cat((_p3, self.ipt_blk4(F.interpolate(patches_batch, size=x3.shape[2:], mode='bilinear', align_corners=True))), 1)
         p3 = self.decoder_block3(_p3)
-        m3 = self.conv_ms_spvn_3(p3) if self.config.ms_supervision else None
+        m3 = self.conv_ms_spvn_3(p3) if self.config.ms_supervision and self.training else None
         if self.config.out_ref:
             p3_gdt = self.gdt_convs_3(p3)
             if self.training:
@@ -2194,10 +2220,10 @@ class Decoder(nn.Module):
         _p2 = _p3 + self.lateral_block3(x2)
 
         if self.config.dec_ipt:
-            patches_batch = self.get_patches_batch(x, _p2) if self.split else x
+            patches_batch = image2patches(x, patch_ref=_p2, transformation='b c (hg h) (wg w) -> b (c hg wg) h w') if self.split else x
             _p2 = torch.cat((_p2, self.ipt_blk3(F.interpolate(patches_batch, size=x2.shape[2:], mode='bilinear', align_corners=True))), 1)
         p2 = self.decoder_block2(_p2)
-        m2 = self.conv_ms_spvn_2(p2) if self.config.ms_supervision else None
+        m2 = self.conv_ms_spvn_2(p2) if self.config.ms_supervision and self.training else None
         if self.config.out_ref:
             p2_gdt = self.gdt_convs_2(p2)
             if self.training:
@@ -2215,17 +2241,17 @@ class Decoder(nn.Module):
         _p1 = _p2 + self.lateral_block2(x1)
 
         if self.config.dec_ipt:
-            patches_batch = self.get_patches_batch(x, _p1) if self.split else x
+            patches_batch = image2patches(x, patch_ref=_p1, transformation='b c (hg h) (wg w) -> b (c hg wg) h w') if self.split else x
             _p1 = torch.cat((_p1, self.ipt_blk2(F.interpolate(patches_batch, size=x1.shape[2:], mode='bilinear', align_corners=True))), 1)
         _p1 = self.decoder_block1(_p1)
         _p1 = F.interpolate(_p1, size=x.shape[2:], mode='bilinear', align_corners=True)
 
         if self.config.dec_ipt:
-            patches_batch = self.get_patches_batch(x, _p1) if self.split else x
+            patches_batch = image2patches(x, patch_ref=_p1, transformation='b c (hg h) (wg w) -> b (c hg wg) h w') if self.split else x
             _p1 = torch.cat((_p1, self.ipt_blk1(F.interpolate(patches_batch, size=x.shape[2:], mode='bilinear', align_corners=True))), 1)
         p1_out = self.conv_out1(_p1)
 
-        if self.config.ms_supervision:
+        if self.config.ms_supervision and self.training:
             outs.append(m4)
             outs.append(m3)
             outs.append(m2)
