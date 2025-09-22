@@ -36,14 +36,15 @@ jobs:
           path: scripts/models/RMBG-2.0
           key: ${{ runner.os }}-rmbg20-v1
 
-      - name: Download RMBG-2.0 if missing
-        if: steps.cache-model.outputs.cache-hit != 'true'
+      - name: Ensure RMBG-2.0 support files
         run: |
-          mkdir -p scripts/models
-          rm -rf scripts/models/RMBG-2.0
-          git lfs install
-          git clone https://huggingface.co/briaai/RMBG-2.0 scripts/models/RMBG-2.0
-          rm -rf scripts/models/RMBG-2.0/.git
+          mkdir -p scripts/models/RMBG-2.0
+          # Büyük model.safetensors zaten repoda/cache’de var
+          # Küçük dosyaları Hugging Face’den indir
+          wget -q https://huggingface.co/briaai/RMBG-2.0/resolve/main/BiRefNet_config.py \
+               -O scripts/models/RMBG-2.0/BiRefNet_config.py || true
+          wget -q https://huggingface.co/briaai/RMBG-2.0/resolve/main/birefnet.py \
+               -O scripts/models/RMBG-2.0/birefnet.py || true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -78,5 +79,5 @@ jobs:
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
-            --model "${{ inputs.model }}" \
+            --model "rmbg20" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
