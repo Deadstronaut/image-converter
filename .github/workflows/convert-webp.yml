@@ -4,24 +4,24 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (or: elektronik/akilli-saat-ve-bileklik/samsung)"
+        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
         required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
         default: "60"
       update_db:
-        description: "products.image_url guncellensin mi?"
+        description: "products.image_url güncellensin mi?"
         required: false
         default: "true"
         type: choice
         options: [true, false]
       model:
-        description: "Kullanilacak BiRefNet modeli"
+        description: "Kullanılacak BiRefNet modeli"
         required: false
         default: "dynamic"
         type: choice
-        options: [hr, dynamic, general, rmbg20]
+        options: [hr, dynamic, rmbg20]
 
 jobs:
   run:
@@ -45,13 +45,10 @@ jobs:
               folder="BiRefNet_HR"
               repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_HR"
               ;;
-            general)
-              folder="BiRefNet_general"
-              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_general"
-              ;;
             rmbg20)
               folder="RMBG-2.0"
-              repo_url="https://huggingface.co/skytnt/rmbg-2.0"
+              # resmi gated repo: briaai/RMBG-2.0 (HF_TOKEN lazım)
+              repo_url="https://huggingface.co/briaai/RMBG-2.0"
               ;;
             *)
               echo "Unsupported model: $SELECTED_MODEL" >&2
@@ -61,7 +58,7 @@ jobs:
           dest="scripts/models/${folder}"
           mkdir -p scripts/models
           rm -rf "$dest"
-          git clone --depth 1 "$repo_url" "$dest"
+          git clone --depth 1 "https://user:$HF_TOKEN@$repo_url" "$dest"
           rm -rf "$dest/.git"
 
       - name: Setup Node
@@ -110,5 +107,3 @@ jobs:
             --quality "${{ inputs.quality }}" \
             --model "${{ inputs.model }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
-
-
