@@ -65,10 +65,16 @@ def load_model(model_name: str):
     try:
         module = import_module(spec["module"])
     except ModuleNotFoundError as exc:
+        missing_name = getattr(exc, "name", "") or ""
+        if missing_name == spec["module"]:
+            raise RuntimeError(
+                "Model '" + model_name + "' is not available locally. "
+                + "Expected package under '" + str(spec["expected_dir"]) + "'.\n"
+                + "Download the model repository via git lfs from Hugging Face and try again."
+            ) from exc
         raise RuntimeError(
-            "Model '" + model_name + "' is not available locally. "
-            + "Expected package under '" + str(spec["expected_dir"]) + "'.\n"
-            + "Download the model repository via git lfs from Hugging Face and try again."
+            "Model '" + model_name + "' dependencies are missing (failed to import '" + missing_name + "').\n"
+            + "Install required Python packages, for example: pip install transformers huggingface-hub accelerate"
         ) from exc
 
     model_cls = getattr(module, spec["model_attr"])

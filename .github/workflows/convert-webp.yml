@@ -74,7 +74,12 @@ jobs:
             timm \
             tqdm \
             scikit-image==0.22.0 \
-            opencv-python-headless==4.10.0.84
+            opencv-python-headless==4.10.0.84 \
+            scipy \
+            prettytable \
+            transformers \
+            "huggingface-hub>=0.25.0" \
+            accelerate
 
       - name: Convert & Upload
         env:
