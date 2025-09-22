@@ -40,6 +40,7 @@ jobs:
         if: steps.cache-model.outputs.cache-hit != 'true'
         run: |
           mkdir -p scripts/models
+          rm -rf scripts/models/RMBG-2.0
           git lfs install
           git clone https://huggingface.co/briaai/RMBG-2.0 scripts/models/RMBG-2.0
           rm -rf scripts/models/RMBG-2.0/.git
@@ -77,5 +78,5 @@ jobs:
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
-            --model "rmbg20" \
+            --model "${{ inputs.model }}" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
