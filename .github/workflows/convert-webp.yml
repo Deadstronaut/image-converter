@@ -59,37 +59,7 @@ jobs:
             scipy \
             prettytable \
             transformers \
-            "huggingface-hub>=0.25.0" \
             accelerate
-
-      - name: Download model weights from Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          SELECTED_MODEL: ${{ inputs.model }}
-        run: |
-          set -euo pipefail
-          case "$SELECTED_MODEL" in
-            dynamic)
-              repo="ZhengPeng7/BiRefNet_dynamic"
-              folder="BiRefNet_dynamic"
-              ;;
-            hr)
-              repo="ZhengPeng7/BiRefNet_HR"
-              folder="BiRefNet_HR"
-              ;;
-            rmbg20)
-              repo="skytnt/rmbg-2.0"
-              folder="RMBG-2.0"
-              ;;
-            *)
-              echo "Unsupported model: $SELECTED_MODEL"
-              exit 1
-              ;;
-          esac
-          mkdir -p scripts/models/$folder
-          huggingface-cli download $repo model.safetensors --token "$HF_TOKEN" --local-dir scripts/models/$folder
-          huggingface-cli download $repo BiRefNet_config.py --token "$HF_TOKEN" --local-dir scripts/models/$folder || true
-          huggingface-cli download $repo birefnet.py --token "$HF_TOKEN" --local-dir scripts/models/$folder || true
 
       - name: Convert & Upload
         env:
