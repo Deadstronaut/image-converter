@@ -3,6 +3,7 @@ import argparse
 from PIL import Image
 import torch
 import numpy as np
+from safetensors.torch import load_file   # safetensors desteği
 import os, sys, importlib.util
 
 base_dir = os.path.dirname(__file__)
@@ -10,12 +11,14 @@ base_dir = os.path.dirname(__file__)
 def load_model():
     model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
 
-    # birefnet import düzeltmeleri (senin kodun aynı kalıyor)
+    # birefnet import fix
     biref_path = os.path.join(model_dir, "birefnet.py")
     with open(biref_path, "r", encoding="utf-8") as f:
         src = f.read()
-    src = src.replace("from .BiRefNet_config import BiRefNetConfig",
-                      "from BiRefNet_config import BiRefNetConfig")
+    src = src.replace(
+        "from .BiRefNet_config import BiRefNetConfig",
+        "from BiRefNet_config import BiRefNetConfig"
+    )
     fixed_biref_path = os.path.join(model_dir, "_birefnet_fixed.py")
     with open(fixed_biref_path, "w", encoding="utf-8") as f:
         f.write(src)
@@ -35,7 +38,7 @@ def load_model():
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
 
-    # önce safetensors dene
+    # önce safetensors, olmazsa bin
     safepath = os.path.join(model_dir, "model.safetensors")
     binpath = os.path.join(model_dir, "pytorch_model.bin")
     try:
@@ -72,7 +75,7 @@ def main():
     model = load_model()
     model.eval()
 
-    # read image
+    # resim oku
     image = Image.open(args.input).convert("RGB")
     arr = np.array(image).astype(np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
@@ -89,11 +92,10 @@ def main():
     mask = (mask > 0.5).astype(np.uint8) * 255
     mask_img = Image.fromarray(mask).resize(image.size)
 
-    # apply alpha
+    # alpha uygula
     image.putalpha(mask_img)
     image.save(args.output)
     print(f"✅ Saved: {args.input} → {args.output}")
-
 
 if __name__ == "__main__":
     main()
