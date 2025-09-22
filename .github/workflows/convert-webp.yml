@@ -19,7 +19,7 @@ on:
       model:
         description: "Kullanılacak BiRefNet modeli"
         required: false
-        default: "dynamic"
+        default: "rmbg20"
         type: choice
         options: [hr, dynamic, rmbg20]
 
