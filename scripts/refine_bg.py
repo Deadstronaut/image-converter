@@ -28,17 +28,20 @@ def load_model(model_name: str):
     elif model_name == "rmbg20":
         model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
 
-        # birefnet.py yükle
-        spec_biref = importlib.util.spec_from_file_location("birefnet", os.path.join(model_dir, "birefnet.py"))
-        birefnet = importlib.util.module_from_spec(spec_biref)
-        sys.modules["birefnet"] = birefnet
-
-        # BiRefNet_config.py yükle
-        spec_cfg = importlib.util.spec_from_file_location("BiRefNet_config", os.path.join(model_dir, "BiRefNet_config.py"))
+        # --- BiRefNet_config.py yükle ---
+        cfg_path = os.path.join(model_dir, "BiRefNet_config.py")
+        spec_cfg = importlib.util.spec_from_file_location("BiRefNet_config", cfg_path)
         cfg_module = importlib.util.module_from_spec(spec_cfg)
-        sys.modules["BiRefNet_config"] = cfg_module
-
         spec_cfg.loader.exec_module(cfg_module)
+
+        # sys.modules içine koy ki relative import çalışsın
+        sys.modules["BiRefNet_config"] = cfg_module
+        sys.modules["models.RMBG-2.0.BiRefNet_config"] = cfg_module
+
+        # --- birefnet.py yükle ---
+        biref_path = os.path.join(model_dir, "birefnet.py")
+        spec_biref = importlib.util.spec_from_file_location("birefnet", biref_path)
+        birefnet = importlib.util.module_from_spec(spec_biref)
         spec_biref.loader.exec_module(birefnet)
 
         BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
@@ -46,7 +49,6 @@ def load_model(model_name: str):
         weights = load_file(os.path.join(model_dir, "model.safetensors"))
         model.load_state_dict(weights)
         return model
-
 
     else:
         raise ValueError(f"Bilinmeyen model: {model_name}")
