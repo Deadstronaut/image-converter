@@ -1,17 +1,12 @@
+# scripts/refine_bg.py
 import argparse
 from PIL import Image
 import torch
 import numpy as np
 from safetensors.torch import load_file
-import os, sys
+import os, sys, importlib.util
 
 base_dir = os.path.dirname(__file__)
-
-# Hugging Face opsiyonel (gated repo gerekirse)
-try:
-    from huggingface_hub import hf_hub_download
-except ImportError:
-    hf_hub_download = None
 
 def load_model(model_name: str):
     if model_name == "dynamic":
@@ -31,10 +26,16 @@ def load_model(model_name: str):
         return model
 
     elif model_name == "rmbg20":
-        sys.path.append(os.path.join(base_dir, "models", "RMBG-2.0"))
-        from birefnet import BiRefNet, BiRefNetConfig
+        model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
+        # birefnet.py dosyasını modül olarak yükle
+        spec = importlib.util.spec_from_file_location("birefnet", os.path.join(model_dir, "birefnet.py"))
+        birefnet = importlib.util.module_from_spec(spec)
+        sys.modules["birefnet"] = birefnet
+        spec.loader.exec_module(birefnet)
+
+        BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
         model = BiRefNet(BiRefNetConfig())
-        weights = load_file(os.path.join(base_dir, "models", "RMBG-2.0", "model.safetensors"))
+        weights = load_file(os.path.join(model_dir, "model.safetensors"))
         model.load_state_dict(weights)
         return model
 
