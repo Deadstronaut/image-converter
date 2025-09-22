@@ -9,7 +9,7 @@ import path from "path";
 const MODEL_FOLDERS = {
   dynamic: "BiRefNet_dynamic",
   hr: "BiRefNet_HR",
-  general: "BiRefNet_general",
+  rmbg20: "RMBG-2.0",
 };
 
 const availableModels = Object.entries(MODEL_FOLDERS)
@@ -21,7 +21,9 @@ const availableModels = Object.entries(MODEL_FOLDERS)
   .map(([name]) => name);
 
 if (!availableModels.length) {
-  console.error("Hic bir BiRefNet modeli bulunamadi. scripts/models altina Hugging Face reposunu git lfs ile alin.");
+  console.error(
+    "Hic bir model bulunamadi. scripts/models altina ilgili Hugging Face reposunu indir."
+  );
   process.exit(1);
 }
 
@@ -49,7 +51,7 @@ const updateDB = process.argv.includes("--update-db");
 
 if (!availableModels.includes(modelArg)) {
   console.error(
-    `Model '${modelArg}' bulunamadi. Kullanim icin hazir modeller: ${availableModels.join(", ")}`
+    `Model '${modelArg}' bulunamadi. Hazir modeller: ${availableModels.join(", ")}`
   );
   process.exit(1);
 }
@@ -145,6 +147,6 @@ async function refineBg(buf, tmpName) {
       if (error) console.error("DB update err:", error.message);
     }
 
-    console.log(`OK ${srcPath} -> ${dstPath}`);
+    console.log(`✅ ${srcPath} -> ${dstPath}`);
   }
 })();
