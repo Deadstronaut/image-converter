@@ -6,6 +6,7 @@ from transformers import PretrainedConfig
 
 class Config(PretrainedConfig):
     def __init__(self) -> None:
+        super().__init__()
         # PATH settings
         self.sys_home_dir = os.path.expanduser('~')    # Make up your file system as: SYS_HOME_DIR/codes/dis/BiRefNet, SYS_HOME_DIR/datasets/dis/xx, SYS_HOME_DIR/weights/xx
 

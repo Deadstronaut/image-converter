@@ -29,6 +29,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache RMBG-2.0 model
+        uses: actions/cache@v4
+        id: cache-model
+        with:
+          path: scripts/models/RMBG-2.0
+          key: ${{ runner.os }}-rmbg20-v1
+
+      - name: Download RMBG-2.0 if missing
+        if: steps.cache-model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p scripts/models
+          git lfs install
+          git clone https://huggingface.co/briaai/RMBG-2.0 scripts/models/RMBG-2.0
+          rm -rf scripts/models/RMBG-2.0/.git
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -47,19 +62,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install "numpy<2"
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-          pip install \
-            pillow \
-            safetensors \
-            einops \
-            kornia \
-            timm \
-            tqdm \
-            scikit-image==0.22.0 \
-            opencv-python-headless==4.10.0.84 \
-            scipy \
-            prettytable \
-            transformers \
-            accelerate
+          pip install pillow safetensors einops kornia timm tqdm \
+                     scikit-image==0.22.0 opencv-python-headless==4.10.0.84 \
+                     scipy prettytable transformers "huggingface-hub>=0.25.0" accelerate
 
       - name: Convert & Upload
         env:
@@ -72,5 +77,5 @@ jobs:
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
-            --model "${{ inputs.model }}" \
+            --model "rmbg20" \
             ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
