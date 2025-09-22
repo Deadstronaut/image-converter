@@ -1,3 +1,4 @@
+# scripts/refine_bg.py
 import argparse
 from PIL import Image
 import torch
@@ -34,10 +35,15 @@ def load_model():
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
 
-    # 🔑 safetensors yerine torch.load kullan
-    weights = torch.load(os.path.join(model_dir, "pytorch_model.bin"), map_location="cpu")
+    # 🔑 PyTorch .bin yükleme (weights_only=False eklendi)
+    weights = torch.load(
+        os.path.join(model_dir, "pytorch_model.bin"),
+        map_location="cpu",
+        weights_only=False
+    )
     model.load_state_dict(weights)
     return model
+
 
 def pad_to_multiple(tensor, multiple=32):
     _, _, h, w = tensor.shape
@@ -47,13 +53,14 @@ def pad_to_multiple(tensor, multiple=32):
     padded = torch.nn.functional.pad(tensor, (0, pad_w, 0, pad_h), mode="reflect")
     return padded, (h, w)
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input image path (JPG/PNG)")
     parser.add_argument("output", help="Output image path (PNG)")
     args = parser.parse_args()
 
-    print("🔍 Loading BiRefNet model: RMBG-2.0")
+    print(f"🔍 Loading BiRefNet model: RMBG-2.0")
     model = load_model()
     model.eval()
 
@@ -78,6 +85,7 @@ def main():
     image.putalpha(mask_img)
     image.save(args.output)
     print(f"✅ Saved: {args.input} → {args.output}")
+
 
 if __name__ == "__main__":
     main()
