@@ -16,6 +16,12 @@ on:
         default: "true"
         type: choice
         options: [true, false]
+      model:
+        description: "Kullanılacak model"
+        required: false
+        default: "rmbg20"
+        type: choice
+        options: [rmbg20]
 
 jobs:
   run:
