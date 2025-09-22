@@ -4,20 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (or: elektronik/akilli-saat-ve-bileklik/samsung)"
+        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
         required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "60"
+        default: "82"
       update_db:
-        description: "products.image_url guncellensin mi?"
+        description: "products.image_url güncellensin mi?"
         required: false
         default: "true"
         type: choice
         options: [true, false]
       model:
-        description: "Kullanilacak model"
+        description: "Kullanılacak BiRefNet modeli"
         required: false
         default: "dynamic"
         type: choice
@@ -28,41 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Hugging Face Login
-        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-
-      - name: Prepare Model Weights
-        shell: bash
-        env:
-          SELECTED_MODEL: ${{ inputs.model }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          set -euo pipefail
-          git lfs install
-          case "$SELECTED_MODEL" in
-            dynamic)
-              folder="BiRefNet_dynamic"
-              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_dynamic"
-              ;;
-            hr)
-              folder="BiRefNet_HR"
-              repo_url="https://huggingface.co/ZhengPeng7/BiRefNet_HR"
-              ;;
-            rmbg20)
-              folder="RMBG-2.0"
-              repo_url="https://huggingface.co/briaai/RMBG-2.0"
-              ;;
-            *)
-              echo "Unsupported model: $SELECTED_MODEL" >&2
-              exit 1
-              ;;
-          esac
-          dest="scripts/models/${folder}"
-          mkdir -p scripts/models
-          rm -rf "$dest"
-          git clone --depth 1 "https://user:${HF_TOKEN}@${repo_url#https://}" "$dest"
-          rm -rf "$dest/.git"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -104,6 +69,7 @@ jobs:
           BUCKET: ${{ secrets.BUCKET }}
           PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
           IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # 👈 Hugging Face token buraya
         run: |
           node scripts/convert-webp.mjs \
             --prefix "${{ inputs.prefix }}" \
