@@ -10,7 +10,7 @@ base_dir = os.path.dirname(__file__)
 def load_model():
     model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
 
-    # birefnet.py import fix
+    # birefnet import düzeltmeleri (senin kodun aynı kalıyor)
     biref_path = os.path.join(model_dir, "birefnet.py")
     with open(biref_path, "r", encoding="utf-8") as f:
         src = f.read()
@@ -20,14 +20,14 @@ def load_model():
     with open(fixed_biref_path, "w", encoding="utf-8") as f:
         f.write(src)
 
-    # load config
+    # config import
     cfg_path = os.path.join(model_dir, "BiRefNet_config.py")
     spec_cfg = importlib.util.spec_from_file_location("BiRefNet_config", cfg_path)
     cfg_module = importlib.util.module_from_spec(spec_cfg)
     spec_cfg.loader.exec_module(cfg_module)
     sys.modules["BiRefNet_config"] = cfg_module
 
-    # load birefnet
+    # birefnet import
     spec_biref = importlib.util.spec_from_file_location("birefnet", fixed_biref_path)
     birefnet = importlib.util.module_from_spec(spec_biref)
     spec_biref.loader.exec_module(birefnet)
@@ -35,15 +35,24 @@ def load_model():
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
 
-    # 🔑 PyTorch .bin yükleme (weights_only=False eklendi)
-    weights = torch.load(
-        os.path.join(model_dir, "pytorch_model.bin"),
-        map_location="cpu",
-        weights_only=False
-    )
-    model.load_state_dict(weights)
+    # önce safetensors dene
+    safepath = os.path.join(model_dir, "model.safetensors")
+    binpath = os.path.join(model_dir, "pytorch_model.bin")
+    try:
+        if os.path.exists(safepath):
+            weights = load_file(safepath)
+            model.load_state_dict(weights, strict=False)
+            print("✅ model.safetensors yüklendi")
+        elif os.path.exists(binpath):
+            weights = torch.load(binpath, map_location="cpu", weights_only=False)
+            model.load_state_dict(weights, strict=False)
+            print("✅ pytorch_model.bin yüklendi")
+        else:
+            raise FileNotFoundError("Hiçbir ağırlık dosyası bulunamadı")
+    except Exception as e:
+        print("❌ Model yükleme hatası:", e)
+        raise
     return model
-
 
 def pad_to_multiple(tensor, multiple=32):
     _, _, h, w = tensor.shape
@@ -52,7 +61,6 @@ def pad_to_multiple(tensor, multiple=32):
     pad_h, pad_w = new_h - h, new_w - w
     padded = torch.nn.functional.pad(tensor, (0, pad_w, 0, pad_h), mode="reflect")
     return padded, (h, w)
-
 
 def main():
     parser = argparse.ArgumentParser()
