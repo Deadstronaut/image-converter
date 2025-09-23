@@ -9,8 +9,6 @@ base_dir = os.path.dirname(__file__)
 
 def load_model():
     model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
-
-    # birefnet import fix
     biref_path = os.path.join(model_dir, "birefnet.py")
     with open(biref_path, "r", encoding="utf-8") as f:
         src = f.read().replace(
@@ -36,15 +34,22 @@ def load_model():
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
 
+    safepath = os.path.join(model_dir, "model.safetensors")
     binpath = os.path.join(model_dir, "pytorch_model.bin")
-    if not os.path.exists(binpath):
-        raise FileNotFoundError("pytorch_model.bin bulunamadı")
 
-    weights = torch.load(binpath, map_location="cpu", weights_only=False)
-    model.load_state_dict(weights, strict=False)
-    print("✅ pytorch_model.bin yüklendi")
+    if os.path.exists(safepath):
+        weights = load_file(safepath)
+        model.load_state_dict(weights, strict=False)
+        print("✅ model.safetensors yüklendi")
+    elif os.path.exists(binpath):
+        weights = load_file(binpath)  # torch.load yerine safetensors
+        model.load_state_dict(weights, strict=False)
+        print("✅ pytorch_model.bin (safetensors) yüklendi")
+    else:
+        raise FileNotFoundError("Hiçbir ağırlık dosyası bulunamadı")
 
     return model
+
 
 def pad_to_multiple(tensor, multiple=32):
     _, _, h, w = tensor.shape
