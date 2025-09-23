@@ -5,6 +5,8 @@ import { execSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import "dotenv/config";
+
 
 const MODEL_FOLDERS = {
   dynamic: "BiRefNet_dynamic",

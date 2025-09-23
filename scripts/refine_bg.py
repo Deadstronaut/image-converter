@@ -3,7 +3,7 @@ import argparse
 from PIL import Image
 import torch
 import numpy as np
-import os, sys, importlib.util
+import os, sys, importlib.util, cv2
 
 base_dir = os.path.dirname(__file__)
 
@@ -69,6 +69,16 @@ def pad_to_multiple(tensor, multiple=32):
     padded = torch.nn.functional.pad(tensor, (0, pad_w, 0, pad_h), mode="reflect")
     return padded, (h, w)
 
+def smooth_mask(mask: np.ndarray, blur=5, feather=7):
+    mask = (mask * 255).astype(np.uint8)
+    if blur > 0:
+        mask = cv2.GaussianBlur(mask, (blur*2+1, blur*2+1), 0)
+    if feather > 0:
+        kernel = np.ones((feather, feather), np.uint8)
+        mask = cv2.erode(mask, kernel, iterations=1)
+        mask = cv2.GaussianBlur(mask, (feather*2+1, feather*2+1), 0)
+    return mask
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input image path (JPG/PNG)")
@@ -93,7 +103,9 @@ def main():
 
     h, w = orig_size
     mask = mask[:h, :w]
-    mask = (mask > 0.5).astype(np.uint8) * 255
+
+    # post-process mask
+    mask = smooth_mask(mask, blur=5, feather=7)
     mask_img = Image.fromarray(mask).resize(image.size)
 
     # alpha uygula

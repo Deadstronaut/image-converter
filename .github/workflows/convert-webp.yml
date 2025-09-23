@@ -51,6 +51,20 @@ jobs:
                      scikit-image==0.22.0 opencv-python-headless==4.10.0.84 \
                      scipy prettytable transformers "huggingface-hub>=0.25.0" accelerate
 
+      - name: Cache RMBG model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: rmbg-model-v2
+
+      - name: Download RMBG model
+        run: |
+          mkdir -p scripts/models/RMBG-2.0
+          python -m huggingface_hub download briaai/RMBG-2.0 \
+            --local-dir scripts/models/RMBG-2.0 \
+            --local-dir-use-symlinks False
+          ls -lh scripts/models/RMBG-2.0
+
       - name: Convert & Upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
