@@ -3,7 +3,6 @@ import argparse
 from PIL import Image
 import torch
 import numpy as np
-from safetensors.torch import load_file   # safetensors desteği
 import os, sys, importlib.util
 
 base_dir = os.path.dirname(__file__)
@@ -14,23 +13,22 @@ def load_model():
     # birefnet import fix
     biref_path = os.path.join(model_dir, "birefnet.py")
     with open(biref_path, "r", encoding="utf-8") as f:
-        src = f.read()
-    src = src.replace(
-        "from .BiRefNet_config import BiRefNetConfig",
-        "from BiRefNet_config import BiRefNetConfig"
-    )
+        src = f.read().replace(
+            "from .BiRefNet_config import BiRefNetConfig",
+            "from BiRefNet_config import BiRefNetConfig"
+        )
     fixed_biref_path = os.path.join(model_dir, "_birefnet_fixed.py")
     with open(fixed_biref_path, "w", encoding="utf-8") as f:
         f.write(src)
 
-    # config import
+    # config
     cfg_path = os.path.join(model_dir, "BiRefNet_config.py")
     spec_cfg = importlib.util.spec_from_file_location("BiRefNet_config", cfg_path)
     cfg_module = importlib.util.module_from_spec(spec_cfg)
     spec_cfg.loader.exec_module(cfg_module)
     sys.modules["BiRefNet_config"] = cfg_module
 
-    # birefnet import
+    # birefnet
     spec_biref = importlib.util.spec_from_file_location("birefnet", fixed_biref_path)
     birefnet = importlib.util.module_from_spec(spec_biref)
     spec_biref.loader.exec_module(birefnet)
@@ -38,23 +36,14 @@ def load_model():
     BiRefNet, BiRefNetConfig = birefnet.BiRefNet, birefnet.BiRefNetConfig
     model = BiRefNet(BiRefNetConfig())
 
-    # önce safetensors, olmazsa bin
-    safepath = os.path.join(model_dir, "model.safetensors")
     binpath = os.path.join(model_dir, "pytorch_model.bin")
-    try:
-        if os.path.exists(safepath):
-            weights = load_file(safepath)
-            model.load_state_dict(weights, strict=False)
-            print("✅ model.safetensors yüklendi")
-        elif os.path.exists(binpath):
-            weights = torch.load(binpath, map_location="cpu", weights_only=False)
-            model.load_state_dict(weights, strict=False)
-            print("✅ pytorch_model.bin yüklendi")
-        else:
-            raise FileNotFoundError("Hiçbir ağırlık dosyası bulunamadı")
-    except Exception as e:
-        print("❌ Model yükleme hatası:", e)
-        raise
+    if not os.path.exists(binpath):
+        raise FileNotFoundError("pytorch_model.bin bulunamadı")
+
+    weights = torch.load(binpath, map_location="cpu", weights_only=False)
+    model.load_state_dict(weights, strict=False)
+    print("✅ pytorch_model.bin yüklendi")
+
     return model
 
 def pad_to_multiple(tensor, multiple=32):
@@ -75,7 +64,7 @@ def main():
     model = load_model()
     model.eval()
 
-    # resim oku
+    # read image
     image = Image.open(args.input).convert("RGB")
     arr = np.array(image).astype(np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
@@ -92,7 +81,7 @@ def main():
     mask = (mask > 0.5).astype(np.uint8) * 255
     mask_img = Image.fromarray(mask).resize(image.size)
 
-    # alpha uygula
+    # apply alpha
     image.putalpha(mask_img)
     image.save(args.output)
     print(f"✅ Saved: {args.input} → {args.output}")
