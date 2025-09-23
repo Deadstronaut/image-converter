@@ -21,9 +21,7 @@ const availableModels = Object.entries(MODEL_FOLDERS)
   .map(([name]) => name);
 
 if (!availableModels.length) {
-  console.error(
-    "Hic bir model bulunamadi. scripts/models altina ilgili Hugging Face reposunu indir."
-  );
+  console.error("Hic bir model bulunamadi. scripts/models altina indir.");
   process.exit(1);
 }
 
@@ -100,10 +98,9 @@ async function refineBg(buf, tmpName) {
   fs.writeFileSync(inputPath, buf);
 
   try {
-  execSync(
-    `python "${refineScript}" "${inputPath}" "${outputPath}"`,
-    { stdio: "inherit" }
-  );
+    execSync(`python "${refineScript}" "${inputPath}" "${outputPath}"`, {
+      stdio: "inherit",
+    });
   } catch (err) {
     console.error("Arka plan iyilestirme hatasi:", err.message);
     throw err;
@@ -126,7 +123,7 @@ async function refineBg(buf, tmpName) {
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
     const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
-    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath, "MODEL:", modelArg);
+    console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
     const buf = await downloadFile(srcPath);
     if (!buf) continue;

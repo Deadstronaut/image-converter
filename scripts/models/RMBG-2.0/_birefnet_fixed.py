@@ -1972,7 +1972,7 @@ from transformers import PreTrainedModel
 # from models.ing import *
 # from models.refiner import Refiner, RefinerPVTInChannels4, RefUNet
 # from models.stem_layer import StemLayer
-from .BiRefNet_config import BiRefNetConfig
+from BiRefNet_config import BiRefNetConfig
 
 
 class BiRefNet(
