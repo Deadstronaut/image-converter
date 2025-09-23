@@ -10,7 +10,7 @@ base_dir = os.path.dirname(__file__)
 def load_model():
     model_dir = os.path.join(base_dir, "models", "RMBG-2.0")
 
-    # birefnet import fix
+    # birefnet.py fix
     biref_path = os.path.join(model_dir, "birefnet.py")
     with open(biref_path, "r", encoding="utf-8") as f:
         src = f.read().replace(
@@ -39,7 +39,7 @@ def load_model():
     safepath = os.path.join(model_dir, "model.safetensors")
     binpath = os.path.join(model_dir, "pytorch_model.bin")
 
-    # fallback mekanizması
+    # ağırlık yükleme sırası
     if os.path.exists(safepath):
         try:
             from safetensors.torch import load_file
