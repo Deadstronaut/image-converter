@@ -1,11 +1,13 @@
 # scripts/models/BiRefNet_dynamic/BiRefNet_config.py
 
-from transformers import PretrainedConfig
+import torch.nn as nn
 
-class BiRefNetConfig(PretrainedConfig):
+class BiRefNetConfig(nn.Module):
     model_type = "SegformerForSemanticSegmentation"
 
     def __init__(self, bb_pretrained=False, **kwargs):
+        super().__init__()
         self.bb_pretrained = bb_pretrained
-        super().__init__(**kwargs)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
