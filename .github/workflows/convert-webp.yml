@@ -4,49 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (or: elektronik/akilli-saat-ve-bileklik/samsung)"
+        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
         required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "60"
+        default: "10"
       update_db:
-        description: "products.image_url guncellensin mi?"
+        description: "products.image_url güncellensin mi?"
         required: false
         default: "true"
         type: choice
         options: [true, false]
       model:
-        description: "Kullanilacak BiRefNet modeli"
+        description: "Kullanılacak BiRefNet modeli"
         required: false
         default: "dynamic"
         type: choice
-        options: [hr, dynamic, general]
+        options: [hr, dynamic]
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: false   # LFS devre dışı
 
-      - name: Prepare BiRefNet weights
-        shell: bash
-        env:
-          SELECTED_MODEL: ${{ inputs.model }}
-        run: |
-          set -euo pipefail
-          git lfs install
-          case "$SELECTED_MODEL" in
-            dynamic) repo="BiRefNet_dynamic" ;;
-            hr) repo="BiRefNet_HR" ;;
-            general) repo="BiRefNet_general" ;;
-            *) echo "Unsupported model: $SELECTED_MODEL" >&2; exit 1 ;;
-          esac
-          dest="scripts/models/${repo}"
-          mkdir -p scripts/models
-          rm -rf "$dest"
-          git clone --depth 1 "https://huggingface.co/ZhengPeng7/${repo}" "$dest"
-          rm -rf "$dest/.git"
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -74,11 +58,8 @@ jobs:
             tqdm \
             scikit-image==0.22.0 \
             opencv-python-headless==4.10.0.84 \
-            scipy \
-            prettytable \
-            transformers \
-            "huggingface-hub>=0.25.0" \
-            accelerate
+            huggingface_hub
+
       - name: Convert & Upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
