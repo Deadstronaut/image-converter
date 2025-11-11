@@ -4,12 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
+        description: "Bucket alt yolu"
         required: false
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "80"
+        default: "83"
+      effort:
+        description: "WebP effort (0-6)"
+        required: false
+        default: "4"
       update_db:
         description: "products.image_url güncellensin mi?"
         required: false
