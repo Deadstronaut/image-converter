@@ -1,0 +1,43 @@
+name: Convert JPG/PNG to WebP (Basic)
+
+on:
+  workflow_dispatch:
+    inputs:
+      prefix:
+        description: "Bucket alt yolu (ör: elektronik/akilli-saat-ve-bileklik/samsung)"
+        required: false
+      quality:
+        description: "WebP kalite (1-100)"
+        required: false
+        default: "80"
+      update_db:
+        description: "products.image_url güncellensin mi?"
+        required: false
+        default: "true"
+        type: choice
+        options: [true, false]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Node deps
+        run: npm install sharp @supabase/supabase-js dotenv --no-audit --no-fund
+
+      - name: Convert & Upload
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
+          BUCKET: ${{ secrets.BUCKET }}
+          PRODUCTS_TABLE: ${{ secrets.PRODUCTS_TABLE }}
+          IMAGE_COLUMN: ${{ secrets.IMAGE_COLUMN }}
+        run: |
+          node scripts/convert-webp-basic.mjs \
+            --prefix "${{ inputs.prefix }}" \
+            --quality "${{ inputs.quality }}" \
+            ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
