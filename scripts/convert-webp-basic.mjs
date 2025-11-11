@@ -25,6 +25,7 @@ const getArg = (n, d = null) => {
 };
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
+const effort = parseInt(getArg("effort", "4"), 10);
 const updateDB = process.argv.includes("--update-db");
 
 // --- Supabase ---
@@ -77,7 +78,10 @@ const removeFile = async (srcPath) => {
     const buf = await downloadFile(srcPath);
     if (!buf) continue;
 
-    const webpBuf = await sharp(buf).webp({ quality }).toBuffer();
+    const webpBuf = await sharp(buf)
+      .webp({ quality, effort, smartSubsample: true })
+      .toBuffer();
+
     await uploadFile(dstPath, webpBuf);
     await removeFile(srcPath);
 
