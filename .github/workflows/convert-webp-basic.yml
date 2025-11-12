@@ -9,11 +9,11 @@ on:
       quality:
         description: "WebP kalite (1-100)"
         required: false
-        default: "83"
+        default: "90"
       effort:
         description: "WebP effort (0-6)"
         required: false
-        default: "4"
+        default: "5"
       update_db:
         description: "products.image_url güncellensin mi?"
         required: false
