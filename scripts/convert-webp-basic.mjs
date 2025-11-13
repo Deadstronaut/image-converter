@@ -1,4 +1,4 @@
-// scripts/convert-webp-basic.mjs
+/* scripts/convert-webp-basic.mjs */
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import fs from "fs";
@@ -23,10 +23,14 @@ const getArg = (n, d = null) => {
   const i = process.argv.indexOf(`--${n}`);
   return i > -1 ? process.argv[i + 1] : d;
 };
+
 const prefix = (getArg("prefix", "") || "").replace(/^\/|\/$/g, "");
 const quality = parseInt(getArg("quality", "82"), 10);
 const effort = parseInt(getArg("effort", "4"), 10);
 const updateDB = process.argv.includes("--update-db");
+
+// YENİ → JPEG dönüşümü opsiyonel
+const includeJPEG = process.argv.includes("--include-jpeg");
 
 // --- Supabase ---
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -37,7 +41,12 @@ const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 const listOnce = async (pfx) => {
   const { data, error } = await storage.list(pfx || "", { limit: 1000 });
   if (error) throw error;
-  return (data || []).filter((f) => /\.(jpe?g|png)$/i.test(f.name));
+
+  return (data || []).filter((f) => {
+    if (/\.png$/i.test(f.name)) return true; // PNG → daima dönüştürülür
+    if (includeJPEG && /\.(jpe?g)$/i.test(f.name)) return true; // JPEG opsiyonel
+    return false;
+  });
 };
 
 // --- DOWNLOAD ---
@@ -72,7 +81,8 @@ const removeFile = async (srcPath) => {
 
   for (const f of files) {
     const srcPath = prefix ? `${prefix}/${f.name}` : f.name;
-    const dstPath = srcPath.replace(/\.(jpe?g|png)$/i, ".webp");
+    const dstPath = srcPath.replace(/\.(png|jpe?g)$/i, ".webp");
+
     console.log("BUCKET:", BUCKET, "SRC PATH:", srcPath);
 
     const buf = await downloadFile(srcPath);
@@ -88,10 +98,12 @@ const removeFile = async (srcPath) => {
     if (updateDB) {
       const oldUrl = publicBase + srcPath;
       const newUrl = publicBase + dstPath;
+
       const { error } = await supabase
         .from(PRODUCTS_TABLE)
         .update({ [IMAGE_COLUMN]: newUrl })
         .eq(IMAGE_COLUMN, oldUrl);
+
       if (error) console.error("DB update err:", error.message);
     }
 
