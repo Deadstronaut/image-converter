@@ -20,12 +20,20 @@ on:
         default: "true"
         type: choice
         options: [true, false]
+      convert_jpeg:
+        description: "JPEG dosyaları da dönüştürülsün mü?"
+        required: false
+        default: "false"
+        type: choice
+        options: [true, false]
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -44,4 +52,5 @@ jobs:
           node scripts/convert-webp-basic.mjs \
             --prefix "${{ inputs.prefix }}" \
             --quality "${{ inputs.quality }}" \
-            ${{ fromJSON(inputs.update_db) && '--update-db' || '' }}
+            ${{ fromJSON(inputs.update_db) && '--update-db' || '' }} \
+            ${{ fromJSON(inputs.convert_jpeg) && '--include-jpeg' || '' }}
