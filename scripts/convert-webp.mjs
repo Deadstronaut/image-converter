@@ -138,22 +138,27 @@ async function refineBg(buf, tmpName) {
     if (updateDB) {
       const oldUrl = publicBase + srcPath;
       const newUrl = publicBase + dstPath;
-      
+
+      // --- LOGLU DB GUNCELLEME KISMI ---
       const { data, error } = await supabase
         .from(PRODUCTS_TABLE)
         .update({ [IMAGE_COLUMN]: newUrl })
         .eq(IMAGE_COLUMN, oldUrl)
-        .select();
+        .select(); // .select() onemli, donen datayi gormemizi saglar
 
       if (error) {
-        console.error("DB update err:", error.message);
-      } else if (data && data.length > 0) {
-        console.log(`✅ DB Guncellendi: ${srcPath}`);
+        console.error(`❌ DB Update Hatası (${srcPath}):`, error.message);
+      } else if (!data || data.length === 0) {
+        // Hata yok ama guncellenen satir da yok
+        console.warn(`⚠️ DB'de eşleşen kayıt bulunamadı! Update atlandı.`);
+        console.warn(`   Aranan Eski URL: ${oldUrl}`);
+        console.warn(`   Denenen Yeni URL: ${newUrl}`);
       } else {
-        console.log(`⚠️ DB Kaydi Bulunamadi (Update atlandi): ${srcPath}`);
+        console.log(`✅ DB Güncellendi (${data.length} satır): ${srcPath}`);
       }
+      // --------------------------------
     }
 
-    console.log(`✅ Dosya Donusturuldu: ${srcPath} -> ${dstPath}`);
+    console.log(`✅ Dosya Dönüştürüldü: ${srcPath} -> ${dstPath}`);
   }
 })();
