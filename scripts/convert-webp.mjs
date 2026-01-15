@@ -7,7 +7,6 @@ import os from "os";
 import path from "path";
 import "dotenv/config";
 
-
 const MODEL_FOLDERS = {
   dynamic: "BiRefNet_dynamic",
   hr: "BiRefNet_HR",
@@ -139,13 +138,27 @@ async function refineBg(buf, tmpName) {
     if (updateDB) {
       const oldUrl = publicBase + srcPath;
       const newUrl = publicBase + dstPath;
-      const { error } = await supabase
+
+      // --- LOGLU DB GUNCELLEME KISMI ---
+      const { data, error } = await supabase
         .from(PRODUCTS_TABLE)
         .update({ [IMAGE_COLUMN]: newUrl })
-        .eq(IMAGE_COLUMN, oldUrl);
-      if (error) console.error("DB update err:", error.message);
+        .eq(IMAGE_COLUMN, oldUrl)
+        .select(); // .select() onemli, donen datayi gormemizi saglar
+
+      if (error) {
+        console.error(`❌ DB Update Hatası (${srcPath}):`, error.message);
+      } else if (!data || data.length === 0) {
+        // Hata yok ama guncellenen satir da yok
+        console.warn(`⚠️ DB'de eşleşen kayıt bulunamadı! Update atlandı.`);
+        console.warn(`   Aranan Eski URL: ${oldUrl}`);
+        console.warn(`   Denenen Yeni URL: ${newUrl}`);
+      } else {
+        console.log(`✅ DB Güncellendi (${data.length} satır): ${srcPath}`);
+      }
+      // --------------------------------
     }
 
-    console.log(`✅ ${srcPath} -> ${dstPath}`);
+    console.log(`✅ Dosya Dönüştürüldü: ${srcPath} -> ${dstPath}`);
   }
 })();
