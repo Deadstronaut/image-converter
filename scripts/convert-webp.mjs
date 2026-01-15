@@ -139,24 +139,38 @@ async function refineBg(buf, tmpName) {
       const oldUrl = publicBase + srcPath;
       const newUrl = publicBase + dstPath;
 
-      // --- LOGLU DB GUNCELLEME KISMI ---
-      const { data, error } = await supabase
+      // 1. DENEME: Tam URL eşleşmesi
+      let { data, error } = await supabase
         .from(PRODUCTS_TABLE)
         .update({ [IMAGE_COLUMN]: newUrl })
         .eq(IMAGE_COLUMN, oldUrl)
-        .select(); // .select() onemli, donen datayi gormemizi saglar
+        .select();
 
       if (error) {
-        console.error(`❌ DB Update Hatası (${srcPath}):`, error.message);
+        console.error(`❌ DB Update Hatası (Tam URL):`, error.message);
       } else if (!data || data.length === 0) {
-        // Hata yok ama guncellenen satir da yok
-        console.warn(`⚠️ DB'de eşleşen kayıt bulunamadı! Update atlandı.`);
-        console.warn(`   Aranan Eski URL: ${oldUrl}`);
-        console.warn(`   Denenen Yeni URL: ${newUrl}`);
+        // 2. DENEME: Tam URL bulunamadıysa, PATH ile 'ilike' araması yap
+        // Örn: veritabanında domain farklı olabilir ama 'araclar/...' aynıdır.
+        console.log(`⚠️ Tam URL eşleşmedi, Path ile deneniyor: %${srcPath}`);
+        
+        const { data: retryData, error: retryError } = await supabase
+            .from(PRODUCTS_TABLE)
+            .update({ [IMAGE_COLUMN]: newUrl })
+            .ilike(IMAGE_COLUMN, `%${srcPath}`) // <-- GEVŞEK EŞLEŞME (Contains/EndsWith)
+            .select();
+            
+        if (retryError) {
+            console.error(`❌ DB Update Hatası (Path Fallback):`, retryError.message);
+        } else if (!retryData || retryData.length === 0) {
+            console.warn(`⚠️ İKİ DENEMEDE DE BULUNAMADI! Manuel kontrol et.`);
+            console.warn(`   Aranan Path: ${srcPath}`);
+        } else {
+            console.log(`✅ DB Güncellendi (Path Match ile): ${srcPath}`);
+        }
+
       } else {
-        console.log(`✅ DB Güncellendi (${data.length} satır): ${srcPath}`);
+        console.log(`✅ DB Güncellendi (Tam Match): ${srcPath}`);
       }
-      // --------------------------------
     }
 
     console.log(`✅ Dosya Dönüştürüldü: ${srcPath} -> ${dstPath}`);
