@@ -138,41 +138,22 @@ async function refineBg(buf, tmpName) {
     if (updateDB) {
       const oldUrl = publicBase + srcPath;
       const newUrl = publicBase + dstPath;
-
-      // 1. DENEME: Tam URL eşleşmesi
-      let { data, error } = await supabase
+      
+      const { data, error } = await supabase
         .from(PRODUCTS_TABLE)
         .update({ [IMAGE_COLUMN]: newUrl })
         .eq(IMAGE_COLUMN, oldUrl)
         .select();
 
       if (error) {
-        console.error(`❌ DB Update Hatası (Tam URL):`, error.message);
-      } else if (!data || data.length === 0) {
-        // 2. DENEME: Tam URL bulunamadıysa, PATH ile 'ilike' araması yap
-        // Örn: veritabanında domain farklı olabilir ama 'araclar/...' aynıdır.
-        console.log(`⚠️ Tam URL eşleşmedi, Path ile deneniyor: %${srcPath}`);
-        
-        const { data: retryData, error: retryError } = await supabase
-            .from(PRODUCTS_TABLE)
-            .update({ [IMAGE_COLUMN]: newUrl })
-            .ilike(IMAGE_COLUMN, `%${srcPath}`) // <-- GEVŞEK EŞLEŞME (Contains/EndsWith)
-            .select();
-            
-        if (retryError) {
-            console.error(`❌ DB Update Hatası (Path Fallback):`, retryError.message);
-        } else if (!retryData || retryData.length === 0) {
-            console.warn(`⚠️ İKİ DENEMEDE DE BULUNAMADI! Manuel kontrol et.`);
-            console.warn(`   Aranan Path: ${srcPath}`);
-        } else {
-            console.log(`✅ DB Güncellendi (Path Match ile): ${srcPath}`);
-        }
-
+        console.error("DB update err:", error.message);
+      } else if (data && data.length > 0) {
+        console.log(`✅ DB Guncellendi: ${srcPath}`);
       } else {
-        console.log(`✅ DB Güncellendi (Tam Match): ${srcPath}`);
+        console.log(`⚠️ DB Kaydi Bulunamadi (Update atlandi): ${srcPath}`);
       }
     }
 
-    console.log(`✅ Dosya Dönüştürüldü: ${srcPath} -> ${dstPath}`);
+    console.log(`✅ Dosya Donusturuldu: ${srcPath} -> ${dstPath}`);
   }
 })();
